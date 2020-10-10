@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="static/vue.js"></script>
+    <script src="static/vue-router.min.js"></script>
+    <script src="static/axios.min.js"></script>
+    <link rel="stylesheet" href="static/bootstrap.min.css">
+    <script src="static/popper.min.js"></script>
+    <script src="static/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="icon" href="static/favicon.ico">
+    <title>Errorly</title>
+</head>
+
+<body>
+    <div id="app">
+        <h1>Hello App!</h1>
+        <p>
+            <!-- use router-link component for navigation. -->
+            <!-- specify the link by passing the `to` prop. -->
+            <!-- `<router-link>` will be rendered as an `<a>` tag by default -->
+            <router-link to="/">Go to Foo</router-link>
+            <router-link to="/a">Go to Bar</router-link>
+        </p>
+        <!-- route outlet -->
+        <!-- component matched by the route will render here -->
+        <router-view></router-view>
+    </div>
+
+
+    <div id="app">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 16.933 16.933">
+                        <g transform="matrix(.92411 .38213 -.92411 .38213 0 -280.067)"
+                            paint-order="markers fill stroke">
+                            <rect width="10.39" height="10.39" x="379.54" y="370.378" ry="2.464" rx="2.464"
+                                fill="#f16971" />
+                            <rect width="10.39" height="10.39" x="376.923" y="367.761" ry="2.464" rx="2.464"
+                                fill="#ea202f" />
+                            <rect width="10.39" height="10.39" x="374.307" y="365.145" ry="2.464" rx="2.464"
+                                fill="#aa1019" />
+                        </g>
+                    </svg>
+                    <span class="font-weight-bold" style="font-size: x-large;">Errorly</span>
+                </a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+                    aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                    <ul class="navbar-nav">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                                data-toggle="dropdown" aria-expanded="false">
+                                Select a Project
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="#">Welcomer</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="#">Create Project</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                                data-toggle="dropdown" aria-expanded="false">
+                                <img width="24"
+                                    src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.gif?size=1024">
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="#">Signed in as <b>ImRock</b></a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="#">Sign Out</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        <div class="banner-image">
+            <div>
+                <div>
+                    <div><span>Welcomer</span></div>
+                    <div></div>
+                    <div>
+                        <div>
+                            <!-- <pie-chart :height="100" :width="100" :options="{
+                                aspectRatio: 5,
+                                reactive: false,
+                                legend: {display: false},
+                                title: {display: false},
+                                tooltip: {display: false},
+                                animation: {animateScale: true},
+                                cutoutPercentage: 50,
+                            }" :chart-data="{
+                                datasets: [{
+                                    data: [1,2,3],
+                                    backgroundColor: ['#EB5757','#F2C94C','#27AE60'],
+                                    borderColor: ['#B84040','#F2994A','#219653'],
+                                }],
+                                labels: ['Open', 'Active', 'Resolved'],
+                            }">
+                            </pie-chart> -->
+                            <pie-chart :height="100" :width="100" :options="{
+                                animation: {animateScale: true},
+                                tooltips: {display: false},
+                                legend: {display: false},
+                                title: {display: false},
+                                cutoutPercentage: 50,
+                                reactive: false,
+                                aspectRatio: 1,
+                            }" :chart-data="{
+                                datasets: [{
+                                    data: [1,2,3],
+                                    backgroundColor: ['#0d6efd','#6c757d','#28a745'],
+                                    borderColor: ['#0256d4','#555c62','#1f7f35'],
+                                }],
+                                labels: ['Open', 'Active', 'Resolved'],
+                            }">
+                            </pie-chart>
+                        </div>
+                        <div>
+                            <span>
+                                <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M10 3H14V14H10V3M10 21V17H14V21H10Z" />
+                                </svg>
+                                7 Open</span>
+                            <span>
+                                <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                        d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z" />
+                                </svg>
+                                3 Active</span>
+                            <span>
+                                <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                        d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
+                                </svg>
+                                5 Resolved</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-xl p-4">
+
+
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" id="issues-tab" data-toggle="tab" href="#issues" role="tab"
+                        aria-controls="issues" aria-selected="true">Issues</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="settings-tab" data-toggle="tab" href="#settings" role="tab"
+                        aria-controls="settings" aria-selected="false">Settings</a>
+                </li>
+            </ul>
+
+
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade show active p-4" id="issues" role="tabpanel" aria-labelledby="issues-tab">
+                    <div class="d-flex mb-3">
+                        <div class="input-group input-group-sm border border-secondary rounded"
+                            style="width:fit-content;">
+                            <button class="btn" type="button" id="search-submit">
+                                <svg class="text-secondary" style="width:21px;height:21px" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                        d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
+                                </svg>
+                            </button>
+                            <input type="text" class="form-control border-white" placeholder="Filter by..."
+                                aria-label="Search" aria-describedby="search-submit">
+                            <button class="btn" type="button" id="search-clear">
+                                <svg class="text-secondary" style="width:21px;height:21px" viewBox="0 0 24 24">
+                                    <path fill="currentColor"
+                                        d="M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2C6.47,2 2,6.47 2,12C2,17.53 6.47,22 12,22C17.53,22 22,17.53 22,12C22,6.47 17.53,2 12,2M14.59,8L12,10.59L9.41,8L8,9.41L10.59,12L8,14.59L9.41,16L12,13.41L14.59,16L16,14.59L13.41,12L16,9.41L14.59,8Z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm"
+                            style="height: fit-content; margin: auto 0.4rem;" type="button" data-toggle="dropdown"
+                            aria-expanded="false">
+                            <span style="font-size:smaller;"></span>Sort by:</span>
+                            <span class="font-weight-bold">Recently Modified</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">Project</a></li>
+                            <li><a class="dropdown-item" href="#">Error Name</a></li>
+                            <li><a class="dropdown-item" href="#">Checkpoint Filename</a></li>
+                            <li><a class="dropdown-item" href="#">Most Occurences</a></li>
+                            <li><a class="dropdown-item" href="#">Least Occurences</a></li>
+                            <li><a class="dropdown-item" href="#">Recently Created</a></li>
+                            <li><a class="dropdown-item" href="#">Least Recently Created</a></li>
+                            <li><a class="dropdown-item" href="#">Recently Modified</a></li>
+                            <li><a class="dropdown-item" href="#">Least Recently Modified</a></li>
+                        </ul>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-borderless table-hover card d-table">
+                            <thead class="card-header">
+                                <tr class="d-table-row">
+                                    <th class="p-0" class="align-middle"></th>
+                                    <th colspan="0" scope="col" class="align-middle" style="width: 1px;">
+                                        <input class="form-check-input" type="checkbox" value="" id="flexCheckDefault">
+                                    </th>
+                                    <th colspan="6" scope="col" class="settings col-6 align-middle">
+                                        <div class="btn-group dropright">
+                                            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button"
+                                                data-toggle="dropdown" aria-expanded="false">
+                                                <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                                                    <path fill="currentColor"
+                                                        d="M2 12H4V17H20V12H22V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17Z" />
+                                                </svg>
+                                                Mark Resolved
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#">
+                                                        <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                                                            <path fill="currentColor"
+                                                                d="M2 12H4V17H20V12H22V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17Z" />
+                                                        </svg>
+                                                        Mark Resolved</a></li>
+                                                <li><a class="dropdown-item" href="#">
+                                                        <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                                                            <path fill="currentColor"
+                                                                d="M18 5H6V7H18M6 9H18V11H6M2 12H4V17H20V12H22V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17M18 13H6V15H18Z" />
+                                                        </svg>
+                                                        Mark Active</a></li>
+                                                <li><a class="dropdown-item" href="#">
+                                                        <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                                                            <path fill="currentColor"
+                                                                d="M2 12H4V17H20V12H22V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17M13 12H11V14H13M13 4H11V10H13Z" />
+                                                        </svg>
+                                                        Mark Open</a></li>
+                                                <li><a class="dropdown-item" href="#">
+                                                        <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                                                            <path fill="currentColor"
+                                                                d="M2 17A2 2 0 0 0 4 19H20A2 2 0 0 0 22 17V12H20V17H4V12H2M14.12 5.46L15.54 6.88L13.41 9L15.54 11.12L14.12 12.54L12 10.41L9.88 12.54L8.46 11.12L10.59 9L8.46 6.88L9.88 5.46L12 7.59Z" />
+                                                        </svg>
+                                                        Mark Invalid</a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item" href="#">
+                                                        <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                                                            <path fill="currentColor"
+                                                                d="M20.5 0A2.5 2.5 0 0 0 18 2.5V3A1 1 0 0 0 17 4V8A1 1 0 0 0 18 9H23A1 1 0 0 0 24 8V4A1 1 0 0 0 23 3V2.5A2.5 2.5 0 0 0 20.5 0M20.5 1A1.5 1.5 0 0 1 22 2.5V3H19V2.5A1.5 1.5 0 0 1 20.5 1M4 2A2 2 0 0 0 2 4V22L6 18H20A2 2 0 0 0 22 16V11H17C15.89 11 15 10.11 15 9V2H4Z" />
+                                                        </svg>
+                                                        Lock Comments</a></li>
+                                                <li><a class="dropdown-item" href="#">
+                                                        <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                                                            <path fill="currentColor"
+                                                                d="M2,6V8H14V6H2M2,10V12H14V10H2M20.04,10.13C19.9,10.13 19.76,10.19 19.65,10.3L18.65,11.3L20.7,13.35L21.7,12.35C21.92,12.14 21.92,11.79 21.7,11.58L20.42,10.3C20.31,10.19 20.18,10.13 20.04,10.13M18.07,11.88L12,17.94V20H14.06L20.12,13.93L18.07,11.88M2,14V16H10V14H2Z" />
+                                                        </svg>
+                                                        Edit Details</a></li>
+                                            </ul>
+                                        </div>
+                                        <div class="assign-select">
+                                            <input type="radio" class="btn-check" name="options" id="option1"
+                                                autocomplete="off" checked>
+                                            <label class="btn btn-outline-secondary btn-sm" for="option1">Assign</label>
+                                            <input type="radio" class="btn-check" name="options" id="option2"
+                                                autocomplete="off">
+                                            <label class="btn btn-outline-secondary btn-sm"
+                                                for="option2">Unassign</label>
+                                        </div>
+                                        <div class="btn-group dropright">
+                                            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button"
+                                                data-toggle="dropdown" aria-expanded="false">
+                                                nobody
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#">ImRock#0001</a></li>
+                                                <li><a class="dropdown-item" href="#">Tyler#0911</a></li>
+                                                <li><a class="dropdown-item" href="#">biscuitcord#1234</a></li>
+                                            </ul>
+                                        </div>
+                                        <button class="btn btn-outline-secondary btn-sm">
+                                            <svg style="width:1rem;height:1rem;vertical-align: sub;"
+                                                viewBox="0 0 24 24">
+                                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+                                            </svg>
+                                        </button>
+                                    </th>
+                                    <th colspan="1" scope="col" class="text-center align-middle">Status</th>
+                                    <th colspan="1" scope="col" class="text-center align-middle">Occurences</th>
+                                    <th colspan="1" scope="col" class="text-center align-middle">Assignee</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="list-group-item d-table-row ticket" style="height: 70px">
+                                    <th class="p-0">
+                                        <div style="background: var(--bs-blue);"></div>
+                                    </th>
+                                    <th colspan="0" class="align-middle"><input class="form-check-input" type="checkbox"
+                                            value="" id="flexCheckDefault"></th>
+                                    <th class="ticket-status" colspan="6">
+                                        <input type="checkbox" class="btn-check" id="btn-check-outlined"
+                                            autocomplete="off">
+                                        <label class="btn" for="btn-check-outlined" style="padding:0;">
+                                            <svg class="text-primary" width="26px" height="26px" viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M12,15.39L8.24,17.66L9.23,13.38L5.91,10.5L10.29,10.13L12,6.09L13.71,10.13L18.09,10.5L14.77,13.38L15.76,17.66M22,9.24L14.81,8.63L12,2L9.19,8.63L2,9.24L7.45,13.97L5.82,21L12,17.27L18.18,21L16.54,13.97L22,9.24Z" />
+                                            </svg>
+                                        </label>
+                                        <span class="text-primary">CommandInvokeError</span>
+                                        <span class="text-secondary">send()</span>
+                                        <span class="text-secondary">modules/misc.py:730</span>
+                                        <span>Command raised an exception: HTTPException: 400 Bad Request (error code:
+                                            50035):
+                                            Invalid Form Body In embed.description: Must be 2048 or fewer in
+                                            length.</span>
+                                        <div class="ticket-footer align-middle">
+                                            <span>Welcomer</span>
+                                            <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" />
+                                            </svg>
+                                            Last modified
+                                            <span>1 minute ago</span>
+                                            Created
+                                            <span>1 minute ago by
+                                                <span class="badge rounded-pill bg-primary">Bot</span>
+                                                Welcomer
+                                            </span>
+                                            <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18" />
+                                            </svg>
+                                            <span>0</span>
+                                            <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M5,3H7V5H5V10A2,2 0 0,1 3,12A2,2 0 0,1 5,14V19H7V21H5C3.93,20.73 3,20.1 3,19V15A2,2 0 0,0 1,13H0V11H1A2,2 0 0,0 3,9V5A2,2 0 0,1 5,3M19,3A2,2 0 0,1 21,5V9A2,2 0 0,0 23,11H24V13H23A2,2 0 0,0 21,15V19A2,2 0 0,1 19,21H17V19H19V14A2,2 0 0,1 21,12A2,2 0 0,1 19,10V5H17V3H19M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15M8,15A1,1 0 0,1 9,16A1,1 0 0,1 8,17A1,1 0 0,1 7,16A1,1 0 0,1 8,15M16,15A1,1 0 0,1 17,16A1,1 0 0,1 16,17A1,1 0 0,1 15,16A1,1 0 0,1 16,15Z" />
+                                            </svg>
+                                        </div>
+                                    </th>
+                                    <td colspan="1" class="text-center align-middle">Open</td>
+                                    <td colspan="1" class="text-center align-middle">1</td>
+                                    <td colspan="1" class="text-center align-middle">Unassigned</td>
+                                </tr>
+                                <tr class="list-group-item d-table-row ticket" style="height: 70px">
+                                    <th class="p-0">
+                                        <div style="background: var(--bs-red);"></div>
+                                    </th>
+                                    <th colspan="0" class="align-middle"><input class="form-check-input" type="checkbox"
+                                            value="" id="flexCheckDefault"></th>
+                                    <th class="ticket-status" colspan="6">
+                                        <input type="checkbox" class="btn-check" id="btn-check-outlined"
+                                            autocomplete="off">
+                                        <label class="btn" for="btn-check-outlined" style="padding:0;">
+                                            <svg class="text-primary"
+                                                style="vertical-align:bottom;width:26px;height:26px"
+                                                viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" />
+                                            </svg>
+                                        </label>
+                                        <span class="text-primary">errorname</span>
+                                        <span class="text-secondary">function</span>
+                                        <svg class="text-secondary" style="width:20px;height:20px" viewBox="0 0 24 24">
+                                            <path fill="currentColor"
+                                                d="M5,3H7V5H5V10A2,2 0 0,1 3,12A2,2 0 0,1 5,14V19H7V21H5C3.93,20.73 3,20.1 3,19V15A2,2 0 0,0 1,13H0V11H1A2,2 0 0,0 3,9V5A2,2 0 0,1 5,3M19,3A2,2 0 0,1 21,5V9A2,2 0 0,0 23,11H24V13H23A2,2 0 0,0 21,15V19A2,2 0 0,1 19,21H17V19H19V14A2,2 0 0,1 21,12A2,2 0 0,1 19,10V5H17V3H19M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15M8,15A1,1 0 0,1 9,16A1,1 0 0,1 8,17A1,1 0 0,1 7,16A1,1 0 0,1 8,15M16,15A1,1 0 0,1 17,16A1,1 0 0,1 16,17A1,1 0 0,1 15,16A1,1 0 0,1 16,15Z" />
+                                        </svg>
+                                        <span class="text-secondary">checkpoint</span>
+                                        <span>description</span>
+                                        <div class="ticket-footer align-middle">
+                                            <span>Project</span>
+                                            <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" />
+                                            </svg>
+                                            Last modified
+                                            <span>10 minutes ago</span>
+                                            Created
+                                            <span>5 days ago by
+                                                ImRock
+                                            </span>
+                                            <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18" />
+                                            </svg>
+                                            <span>6</span>
+                                            <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                                                <path fill="currentColor"
+                                                    d="M5,3H7V5H5V10A2,2 0 0,1 3,12A2,2 0 0,1 5,14V19H7V21H5C3.93,20.73 3,20.1 3,19V15A2,2 0 0,0 1,13H0V11H1A2,2 0 0,0 3,9V5A2,2 0 0,1 5,3M19,3A2,2 0 0,1 21,5V9A2,2 0 0,0 23,11H24V13H23A2,2 0 0,0 21,15V19A2,2 0 0,1 19,21H17V19H19V14A2,2 0 0,1 21,12A2,2 0 0,1 19,10V5H17V3H19M12,15A1,1 0 0,1 13,16A1,1 0 0,1 12,17A1,1 0 0,1 11,16A1,1 0 0,1 12,15M8,15A1,1 0 0,1 9,16A1,1 0 0,1 8,17A1,1 0 0,1 7,16A1,1 0 0,1 8,15M16,15A1,1 0 0,1 17,16A1,1 0 0,1 16,17A1,1 0 0,1 15,16A1,1 0 0,1 16,15Z" />
+                                            </svg>
+                                        </div>
+                                    </th>
+                                    <td colspan="1" class="text-center align-middle">Open</td>
+                                    <td colspan="1" class="text-center align-middle">55</td>
+                                    <td colspan="1" class="text-center align-middle">Unassigned</td>
+                                </tr>
+                                <tr class="list-group-item d-table-row ticket" style="height: 70px">
+                                    <th class="p-0">
+                                        <div style="background: var(--bs-gray);"></div>
+                                    </th>
+                                    <th colspan="0" class="align-middle"><input class="form-check-input" type="checkbox"
+                                            value="" id="flexCheckDefault"></th>
+                                    <th colspan="6">text</th>
+                                    <td colspan="1" class="text-center align-middle">Idle</td>
+                                    <td colspan="1" class="text-center align-middle">32</td>
+                                    <td colspan="1" class="text-center align-middle">ImRock</td>
+                                </tr>
+                                <tr class="list-group-item d-table-row ticket" style="height: 70px">
+                                    <th class="p-0">
+                                        <div style="background: var(--bs-green);"></div>
+                                    </th>
+                                    <th colspan="0" class="align-middle"><input class="form-check-input" type="checkbox"
+                                            value="" id="flexCheckDefault"></th>
+                                    <th colspan="6">text</th>
+                                    <td colspan="1" class="text-center align-middle">Idle</td>
+                                    <td colspan="1" class="text-center align-middle">32</td>
+                                    <td colspan="1" class="text-center align-middle">biscuitcord</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <span class="badge rounded-pill bg-secondary">Active</span>
+                    <span class="badge rounded-pill bg-primary">Open</span>
+                    <span class="badge rounded-pill bg-danger">Invalid</span>
+                    <span class="badge rounded-pill bg-success">Resolved</span>
+                </div>
+
+
+                <div class="tab-pane fade p-4" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+                    Settings
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="static/chart.min.js"></script>
+<script src="static/vue-chartjs.min.js"></script>
+<script src="static/script.js"></script>
+
+</html>

@@ -1,0 +1,16 @@
+host: 127.0.0.1:8001
+secret: "changeTheSecretToA32LetterString"
+postgres:
+    Addr:     ":5432",
+    User:     "username",
+    Password: "password",
+    Database: "",
+logging:
+    console_logging: true
+    file_logging: true
+    encode_as_json: false
+    directory: logs
+    filename: errorly
+    max_size: 1024
+    max_backups: 16
+    max_age: 14

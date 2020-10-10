@@ -1,0 +1,266 @@
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/bwmarrin/snowflake"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"golang.org/x/oauth2"
+)
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+// var store = sessions.NewCookieStore([]byte{103, 114, 77, 52, 115, 70, 98, 112, 115, 67, 73, 77, 102, 36, 115, 104, 103, 51, 70, 71, 112, 55, 102, 114, 89, 87, 50, 75, 50, 100, 86, 98})
+var store = sessions.NewCookieStore([]byte("grM4sFbpsCIMf$shg3FGp7frYW2K2dVb"))
+var router = mux.NewRouter()
+
+// DiscordUser is the structure of a /users/@me request
+type DiscordUser struct {
+	ID            snowflake.ID `json:"id" msgpack:"id"`
+	Username      string       `json:"username" msgpack:"username"`
+	Discriminator string       `json:"discriminator" msgpack:"discriminator"`
+	Avatar        string       `json:"avatar" msgpack:"avatar"`
+	MFAEnabled    bool         `json:"mfa_enabled,omitempty" msgpack:"mfa_enabled,omitempty"`
+	Locale        string       `json:"locale,omitempty" msgpack:"locale,omitempty"`
+	Verified      bool         `json:"verified,omitempty" msgpack:"verified,omitempty"`
+	Email         string       `json:"email,omitempty" msgpack:"email,omitempty"`
+	Flags         int          `json:"flags" msgpack:"flags"`
+	PremiumType   int          `json:"premium_type" msgpack:"premium_type"`
+}
+
+// func init() {
+// 	db := pg.Connect(&pg.Options{
+// 		Addr:     ":5432",
+// 		User:     "rock",
+// 		Password: "password",
+// 		Database: "",
+// 	})
+
+// 	ctx := context.Background()
+// 	if err := db.Ping(ctx); err != nil {
+// 		panic(err)
+// 	}
+// 	var version string
+// 	_, err := db.QueryOneContext(ctx, pg.Scan(&version), "SELECT version()")
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	println("Connected to postgres version", version)
+// }
+
+// func main() {
+
+// 	err := fasthttp.ListenAndServe("0.0.0.0:8000", HandleRequest)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
+
+// HandleRequest handles any incomming HTTP requests
+func HandleRequest(ctx *fasthttp.RequestCtx) {
+	// var res []byte
+	// var err error
+
+	path := string(ctx.Request.URI().Path())
+
+	defer func() {
+		fmt.Printf("%s %s %s %d\n",
+			ctx.RemoteAddr(),
+			ctx.Request.Header.Method(),
+			ctx.Request.URI().Path(),
+			ctx.Response.StatusCode())
+	}()
+
+	if strings.HasPrefix(path, "/static") {
+		root, _ := os.Getwd()
+		_, filename := filepath.Split(path)
+		filepath := filepath.Join(root, "web/static", filename)
+
+		if _, err := os.Stat(filepath); err != nil {
+			if os.IsNotExist(err) {
+				ctx.SetStatusCode(404)
+			} else {
+				ctx.SetStatusCode(500)
+			}
+		} else {
+			ctx.SendFile(filepath)
+		}
+		return
+	}
+
+	fasthttpadaptor.NewFastHTTPHandler(router)(ctx)
+}
+
+// GenerateRandomString returns a securely generated random string.
+func GenerateRandomString(n int) string {
+	b := make([]byte, n)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
+}
+
+func main() {
+	ctx := context.Background()
+	conf := &oauth2.Config{
+		ClientID:     "",
+		ClientSecret: "",
+		Scopes:       []string{"identify", "email"},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://discord.com/api/oauth2/authorize",
+			TokenURL: "https://discord.com/api/oauth2/token",
+		},
+		RedirectURL: "http://127.0.0.1:8000/oauth2/callback",
+	}
+
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		_file, _ := ioutil.ReadFile("web/spa.html")
+		w.Write(_file)
+	})
+
+	// router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	session, _ := store.Get(r, "session")
+	// 	defer session.Save(r, w)
+
+	// 	val, ok := session.Values["token"].([]byte)
+	// 	if !ok {
+	// 		println("Redirecting due to invalid token")
+	// 		http.Redirect(w, r, "/login", 303)
+	// 		return
+	// 	}
+
+	// 	token := &oauth2.Token{}
+	// 	err := json.Unmarshal(val, &token)
+	// 	if err != nil {
+	// 		println("Redirecting due to invalid token")
+	// 		http.Redirect(w, r, "/login", 303)
+	// 		return
+	// 	}
+
+	// 	client := conf.Client(ctx, token)
+	// 	resp, err := client.Get("https://discord.com/api/users/@me")
+	// 	if err != nil {
+	// 		println("Failed to get from discord", err.Error())
+	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 		return
+	// 	}
+
+	// 	headers := make(map[string][]string)
+	// 	for k, v := range resp.Header {
+	// 		headers[k] = v
+	// 	}
+	// 	_headers, _ := json.Marshal(headers)
+	// 	w.Write(_headers)
+
+	// 	body, err := ioutil.ReadAll(resp.Body)
+	// 	if err != nil {
+	// 		println(err.Error())
+	// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 		return
+	// 	}
+
+	// 	w.Write(body)
+	// })
+
+	router.HandleFunc("/session", func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session")
+		json.NewEncoder(w).Encode(session.Values)
+	})
+	router.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session")
+		defer session.Save(r, w)
+
+		for k := range session.Values {
+			delete(session.Values, k)
+		}
+	})
+	router.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session")
+		defer session.Save(r, w)
+
+		csrfString := GenerateRandomString(32)
+		session.Values["oauth_csrf"] = csrfString
+
+		url := conf.AuthCodeURL(csrfString)
+		http.Redirect(w, r, url, 303)
+	})
+
+	router.HandleFunc("/oauth2/callback", func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session")
+		defer session.Save(r, w)
+
+		_csrfString := r.URL.Query().Get("state")
+		csrfString, ok := session.Values["oauth_csrf"].(string)
+		if !ok {
+			println("Session is missing CSRF state")
+			http.Error(w, "Missing CSRF state", http.StatusInternalServerError)
+			return
+		}
+
+		if _csrfString != csrfString {
+			println(_csrfString, "is not equal to", csrfString)
+			http.Error(w, "Mismatched CSRF states", http.StatusUnauthorized)
+			return
+		}
+
+		delete(session.Values, "oauth_csrf")
+
+		code := r.URL.Query().Get("code")
+		token, err := conf.Exchange(ctx, code)
+		if err != nil {
+			println(err.Error())
+			http.Error(w, "Failed to exchange code", http.StatusInternalServerError)
+			return
+		}
+
+		_token, err := json.Marshal(token)
+		if err != nil {
+			println(err.Error())
+			http.Error(w, "Failed to marshal token", http.StatusInternalServerError)
+			return
+		}
+
+		session.Values["token"] = _token
+
+		client := conf.Client(ctx, token)
+		resp, err := client.Get("https://discord.com/api/users/@me")
+		if err != nil {
+			println("Failed to get from discord", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			println(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		w.Write(body)
+
+		_user := &DiscordUser{}
+		err = json.Unmarshal(body, &_user)
+		if err != nil {
+			println("Failed to retrieve user info", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		session.Values["user"] = body
+		http.Redirect(w, r, "/", 303)
+	})
+
+	err := fasthttp.ListenAndServe("0.0.0.0:8000", HandleRequest)
+	if err != nil {
+		panic(err)
+	}
+}
