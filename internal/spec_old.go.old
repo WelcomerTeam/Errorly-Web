@@ -68,11 +68,8 @@ type DiscordUser struct {
 // 	}
 // }
 
-// HandleRequest handles any incomming HTTP requests
+// HandleRequest handles any incoming HTTP requests
 func HandleRequest(ctx *fasthttp.RequestCtx) {
-	// var res []byte
-	// var err error
-
 	path := string(ctx.Request.URI().Path())
 
 	defer func() {

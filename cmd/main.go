@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	// errorly "github.com/TheRockettek/Errorly-Web/internal"
 	errorly "../internal"
 	"github.com/rs/zerolog"
 )
@@ -28,12 +27,12 @@ func main() {
 
 	zerolog.SetGlobalLevel(level)
 
-	er, err := errorly.NewErrorly(logger)
+	errorly, err := errorly.NewErrorly(logger)
 	if err != nil {
 		log.Panic().Err(err).Msgf("Cannot create errorly: %s", err)
 	}
 
-	err = er.Open()
+	err = errorly.Open()
 	if err != nil {
 		log.Panic().Err(err).Msgf("Cannot open errorly: %s", err)
 	}

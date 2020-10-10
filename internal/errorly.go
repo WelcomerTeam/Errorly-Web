@@ -1,10 +1,13 @@
 package errorly
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"context"
@@ -15,6 +18,9 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"golang.org/x/oauth2"
 	"golang.org/x/xerrors"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"gopkg.in/yaml.v2"
@@ -29,35 +35,16 @@ const VERSION = "0.1"
 // at.
 const ConfigurationPath = "errorly.yaml"
 
+// ErrMissingSecret is raised when no/invalid secret is specified for cookie signing
+var ErrMissingSecret = xerrors.New("Invalid secret '%s' provided")
+
 // Configuration represents the configuration for Errorly
 type Configuration struct {
 	Host          string `json:"host" yaml:"host"`
 	SessionSecret string `json:"secret" yaml:"secret"`
 
-	Postgres *pg.Options `json:"postgres" yaml:"postgres"`
-
-	// Postgres struct {
-	// 	// Network               string
-	// 	Addr     string `json:"addr" yaml:"addr"`
-	// 	User     string `json:"user" yaml:"user"`
-	// 	Password string `json:"password" yaml:"password"`
-	// 	Database string `json:"database" yaml:"database"`
-	// 	// ApplicationName       string
-	// 	// TLSConfig             *tls.Config
-	// 	// DialTimeout           time.Duration
-	// 	// ReadTimeout           time.Duration
-	// 	// WriteTimeout          time.Duration
-	// 	// MaxRetries            int
-	// 	// RetryStatementTimeout bool
-	// 	// MinRetryBackoff       time.Duration
-	// 	// MaxRetryBackoff       time.Duration
-	// 	// PoolSize              int
-	// 	// MinIdleConns          int
-	// 	// MaxConnAge            time.Duration
-	// 	// PoolTimeout           time.Duration
-	// 	// IdleTimeout           time.Duration
-	// 	// IdleCheckFrequency    time.Duration
-	// } `json:"postgres" yaml:"postgres"`
+	Postgres *pg.Options    `json:"postgres" yaml:"postgres"`
+	OAuth    *oauth2.Config `json:"oauth" yaml:"oauth"`
 
 	Logging struct {
 		ConsoleLoggingEnabled bool `json:"console_logging" yaml:"console_logging"`
@@ -159,7 +146,66 @@ func (er *Errorly) LoadConfiguration(path string) (configuration *Configuration,
 	return
 }
 
+// HandleRequest handles incoming HTTP requests
+func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
+	path := string(ctx.Request.URI().Path())
+
+	defer func() {
+		fmt.Printf("%s %s %s %d\n",
+			ctx.RemoteAddr(),
+			ctx.Request.Header.Method(),
+			ctx.Request.URI().Path(),
+			ctx.Response.StatusCode())
+	}()
+
+	if strings.HasPrefix(path, "/static") {
+		root, _ := os.Getwd()
+		_, filename := filepath.Split(path)
+		filepath := filepath.Join(root, "web/static", filename)
+
+		if _, err := os.Stat(filepath); err != nil {
+			if os.IsNotExist(err) {
+				ctx.SetStatusCode(404)
+			} else {
+				ctx.SetStatusCode(500)
+			}
+		} else {
+			ctx.SendFile(filepath)
+		}
+		return
+	}
+
+	fasthttpadaptor.NewFastHTTPHandler(er.Router)(ctx)
+}
+
 // Open starts the web worker
 func (er *Errorly) Open() (err error) {
+
+	var secret string
+	secret = er.Configuration.SessionSecret
+	if secret == "" {
+		secret = os.Getenv("ERRORLY_SECRET")
+		if secret == "" {
+			return xerrors.Errorf(ErrMissingSecret.Error(), secret)
+		}
+	}
+	if len(secret) != 32 {
+		return xerrors.Errorf(ErrMissingSecret.Error(), secret)
+	}
+
+	er.Postgres = pg.Connect(er.Configuration.Postgres)
+	if err := er.Postgres.Ping(er.ctx); err != nil {
+		return err
+	}
+	er.Logger.Info().Msg("Connected to postgres")
+
+	er.Store = sessions.NewCookieStore([]byte(er.Configuration.SessionSecret))
+	er.Router = mux.NewRouter()
+
+	createEndpoints(er.Router)
+
+	fmt.Printf("Serving on %s (Press CTRL+C to quit)\n", er.Configuration.Host)
+	err = fasthttp.ListenAndServe(er.Configuration.Host, er.HandleRequest)
+
 	return
 }

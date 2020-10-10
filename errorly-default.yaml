@@ -1,10 +1,10 @@
-host: 127.0.0.1:8001
+host: 127.0.0.1:8000
 secret: "changeTheSecretToA32LetterString"
 postgres:
-    Addr:     ":5432",
-    User:     "username",
-    Password: "password",
-    Database: "",
+    Addr:     ":5432"
+    User:     "username"
+    Password: "password"
+    Database: ""
 logging:
     console_logging: true
     file_logging: true
@@ -14,3 +14,13 @@ logging:
     max_size: 1024
     max_backups: 16
     max_age: 14
+oauth:
+    client_id: 0
+    client_secret: 0
+    scopes:
+        - identify
+        - email
+    endpoint:
+        authurl: https://discord.com/api/oauth2/authorize
+        tokenurl: https://discord.com/api/oauth2/token
+    redirecturl: http://127.0.0.1:8000/oauth2/callback
