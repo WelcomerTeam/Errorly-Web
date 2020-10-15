@@ -1,4 +1,4 @@
-package idGenerator
+package idgenerator
 
 import (
 	"sync"
