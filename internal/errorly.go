@@ -218,7 +218,7 @@ func (er *Errorly) Open() (err error) {
 
 	er.Store = sessions.NewCookieStore([]byte(er.Configuration.SessionSecret))
 	er.Router = NewMethodRouter()
-	er.IDGen = NewIDGenerator(1602507674941, 0)
+	er.IDGen = NewIDGenerator(epoch, 0)
 
 	er.Logger.Debug().Msg("Creating schema")
 	err = createSchema(er.Postgres)

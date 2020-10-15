@@ -2,5 +2,23 @@
     {
         "path": "/",
         "file": "web/templates/index.html"
+    },
+    {
+        "path": "/project/create",
+        "file": "web/templates/create_project.html"
+    },
+    {
+        "path": "/project/:id",
+        "file": "web/templates/project/index.html",
+        "children": [
+            {
+                "path": "",
+                "file": "web/templates/project/issues.html"
+            },
+            {
+                "path": "settings",
+                "file": "web/templates/project/settings.html"
+            }
+        ]
     }
 ]

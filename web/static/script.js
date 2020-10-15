@@ -13,9 +13,29 @@ Vue.component("pie-chart", {
 var vue;
 var router;
 
+function registerRouteEnter(routes, path, f) {
+    routes.forEach(route => {
+        if (route.path == path[0]) {
+            if (path.length == 1) {
+                route.component.beforeRouteEnter = f
+                return
+            } else {
+                if (route.children?.length > 0 && path.length > 1) {
+                    registerRouteEnter(route.children, path.slice(1), f)
+                }
+            }
+        }
+    })
+}
+
 axios.get("/api/dictionary").then(
     result => {
         routes = result.data.data.routes;
+
+        registerRouteEnter(routes, ["/"], function (to, from, next) {
+            console.log(to, from, next);
+            next();
+        })
 
         router = new VueRouter({
             routes,
@@ -64,7 +84,10 @@ axios.get("/api/dictionary").then(
                         return object.name.toLowerCase().includes(this.projectFilter.toLowerCase())
                     })
                 }
-            }
+            },
+            beforeRouteEnter(to, from, next) {
+                console.log(to, from, next);
+            },
         }).$mount("#app")
     }
 )
