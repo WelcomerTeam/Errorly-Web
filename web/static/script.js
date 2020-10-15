@@ -10,18 +10,61 @@ Vue.component("pie-chart", {
     },
 })
 
-const routes = [
-    { path: "/", component: { template: "<div>a</div>" } },
-    { path: "/b", component: { template: "<div>a</div>" } },
-]
+var vue;
+var router;
 
-const router = new VueRouter({
-    routes
-})
+axios.get("/api/dictionary").then(
+    result => {
+        routes = result.data.data.routes;
 
-// el: '#app'
+        router = new VueRouter({
+            routes,
+        })
 
+        vue = new Vue({
+            router,
+            data() {
+                return {
+                    hasError: false,
+                    error: "",
 
-const vue = new Vue({
-    router
-}).$mount("#app")
+                    userLoading: true,
+                    userAuthenticated: false,
+                    userProjects: [],
+                    user: {},
+
+                    projectFilter: "",
+                }
+            },
+            mounted() {
+                this.fetchMe();
+            },
+            methods: {
+                fetchMe() {
+                    axios.get("/api/me")
+                        .then(result => {
+                            data = result.data;
+                            if (data.success) {
+                                this.userAuthenticated = data.data.authenticated;
+                                this.userProjects = data.data.projects;
+                                this.user = data.data.user;
+                            } else {
+                                this.hasError = true;
+                                this.error = data.error;
+                            }
+                        })
+                        .catch(error => { this.hasError = true; this.error = error; })
+                        .finally(() => { this.userLoading = false })
+                }
+            },
+            computed: {
+                filterProjects() {
+                    if (this.projectFilter == "") { return this.userProjects }
+                    return this.userProjects.filter(object => {
+                        return object.name.toLowerCase().includes(this.projectFilter.toLowerCase())
+                    })
+                }
+            }
+        }).$mount("#app")
+    }
+)

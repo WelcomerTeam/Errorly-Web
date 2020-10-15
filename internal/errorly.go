@@ -12,8 +12,7 @@ import (
 
 	"context"
 
-	"github.com/go-pg/pg"
-	"github.com/gorilla/mux"
+	"github.com/go-pg/pg/v10"
 	"github.com/gorilla/sessions"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/rs/zerolog"
@@ -29,7 +28,7 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // VERSION respects semantic versioning
-const VERSION = "0.1"
+const VERSION = "0.2"
 
 // ConfigurationPath is the path to the file the configration will be located
 // at.
@@ -69,9 +68,12 @@ type Errorly struct {
 
 	Logger zerolog.Logger `json:"-"`
 
-	Postgres *pg.DB
-	Router   *mux.Router
-	Store    *sessions.CookieStore
+	Postgres      *pg.DB
+	PostgressConn *pg.Conn
+
+	Router *MethodRouter
+	Store  *sessions.CookieStore
+	IDGen  *IDGenerator
 }
 
 // NewErrorly creates an Errorly instance.
@@ -87,6 +89,7 @@ func NewErrorly(logger io.Writer) (er *Errorly, err error) {
 		Logger: zerolog.New(logger).With().Timestamp().Logger(),
 	}
 
+	// Load Configuration
 	configuration, err := er.LoadConfiguration(ConfigurationPath)
 	if err != nil {
 		return nil, xerrors.Errorf("new errorly: %w", err)
@@ -96,6 +99,7 @@ func NewErrorly(logger io.Writer) (er *Errorly, err error) {
 	}
 	er.Configuration = configuration
 
+	// Create logging writers
 	var writers []io.Writer
 	if er.Configuration.Logging.ConsoleLoggingEnabled {
 		writers = append(writers, logger)
@@ -175,6 +179,15 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	if path == "/" {
+		body, _ := ioutil.ReadFile("web/spa.html")
+		ctx.Write(body)
+		ctx.SetContentType("text/html")
+		ctx.SetStatusCode(200)
+		// ctx.SendFile("web/spa.html")
+		return
+	}
+
 	fasthttpadaptor.NewFastHTTPHandler(er.Router)(ctx)
 }
 
@@ -194,15 +207,29 @@ func (er *Errorly) Open() (err error) {
 	}
 
 	er.Postgres = pg.Connect(er.Configuration.Postgres)
-	if err := er.Postgres.Ping(er.ctx); err != nil {
+	er.PostgressConn = er.Postgres.Conn()
+	defer er.PostgressConn.Close()
+	defer er.Postgres.Close()
+
+	if err := er.PostgressConn.Ping(er.ctx); err != nil {
 		return err
 	}
 	er.Logger.Info().Msg("Connected to postgres")
 
 	er.Store = sessions.NewCookieStore([]byte(er.Configuration.SessionSecret))
-	er.Router = mux.NewRouter()
+	er.Router = NewMethodRouter()
+	er.IDGen = NewIDGenerator(1602507674941, 0)
 
-	createEndpoints(er.Router)
+	er.Logger.Debug().Msg("Creating schema")
+	err = createSchema(er.Postgres)
+	if err != nil {
+		return err
+	}
+	er.Logger.Debug().Msg("Created schema")
+
+	er.Logger.Debug().Msg("Creating endpoints")
+	er.createEndpoints()
+	er.Logger.Debug().Msg("Created endpoints")
 
 	fmt.Printf("Serving on %s (Press CTRL+C to quit)\n", er.Configuration.Host)
 	err = fasthttp.ListenAndServe(er.Configuration.Host, er.HandleRequest)

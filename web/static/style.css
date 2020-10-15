@@ -122,3 +122,14 @@
 #navbarNavDropdown {
     justify-content: flex-end;
 }
+
+.dropdown-item.active, .dropdown-item:active {
+    color: initial;
+    background-color: rgba(0,0,0,.15);
+}
+.card-text {
+    margin: 0 1rem 0 0;
+}
+.card-text > svg {
+    margin-right: 2px;
+}

@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	errorly "../internal"
+	errorly "github.com/TheRockettek/Errorly-Web/internal"
 	"github.com/rs/zerolog"
 )
 

@@ -1,0 +1,111 @@
+<div v-if="!this.$root.userAuthenticated">
+    <div class="text-center">
+        <div class="bg-light py-5">
+            <div class="col-sm-9 col-md-8 col-lg-6 col-xl-5 p-5 m-auto">
+                <h1 class="display-4 font-weight-bold">Automate error collection and handling</h1>
+                <p class="text-dark mt-4 mb-5">
+                    With Errorly, you can easily integrate both error logging and issue handling in one platform. Easily
+                    sort out issues and segregate what needs to be done and what has already been done.
+                </p>
+                <a href="/login">
+                    <button type="button" class="btn btn-outline-dark mr-2">
+                        <svg viewBox="0 0 24 24" style="width: 24px; height: 24px;">
+                            <path fill="currentColor"
+                                d="M22,24L16.75,19L17.38,21H4.5A2.5,2.5 0 0,1 2,18.5V3.5A2.5,2.5 0 0,1 4.5,1H19.5A2.5,2.5 0 0,1 22,3.5V24M12,6.8C9.32,6.8 7.44,7.95 7.44,7.95C8.47,7.03 10.27,6.5 10.27,6.5L10.1,6.33C8.41,6.36 6.88,7.53 6.88,7.53C5.16,11.12 5.27,14.22 5.27,14.22C6.67,16.03 8.75,15.9 8.75,15.9L9.46,15C8.21,14.73 7.42,13.62 7.42,13.62C7.42,13.62 9.3,14.9 12,14.9C14.7,14.9 16.58,13.62 16.58,13.62C16.58,13.62 15.79,14.73 14.54,15L15.25,15.9C15.25,15.9 17.33,16.03 18.73,14.22C18.73,14.22 18.84,11.12 17.12,7.53C17.12,7.53 15.59,6.36 13.9,6.33L13.73,6.5C13.73,6.5 15.53,7.03 16.56,7.95C16.56,7.95 14.68,6.8 12,6.8M9.93,10.59C10.58,10.59 11.11,11.16 11.1,11.86C11.1,12.55 10.58,13.13 9.93,13.13C9.29,13.13 8.77,12.55 8.77,11.86C8.77,11.16 9.28,10.59 9.93,10.59M14.1,10.59C14.75,10.59 15.27,11.16 15.27,11.86C15.27,12.55 14.75,13.13 14.1,13.13C13.46,13.13 12.94,12.55 12.94,11.86C12.94,11.16 13.45,10.59 14.1,10.59Z">
+                            </path>
+                        </svg>
+                        Login with Discord
+                    </button>
+                </a>
+            </div>
+        </div>
+        <div style="overflow: hidden;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                <path fill="#f8f9fa" fill-opacity="1"
+                    d="M0,224L80,202.7C160,181,320,139,480,138.7C640,139,800,181,960,176C1120,171,1280,117,1360,90.7L1440,64L1440,0L1360,0C1280,0,1120,0,960,0C800,0,640,0,480,0C320,0,160,0,80,0L0,0Z">
+                </path>
+            </svg>
+        </div>
+    </div>
+</div>
+<div v-else>
+    <div class="container mt-5 text-center">
+
+        <h3 class="pb-3 font-weight-bold">Select a project</h3>
+
+        <div class="d-flex pb-3 border-bottom border-muted">
+            <div class="input-group input-group-sm border border-secondary rounded mr-3">
+                <button class=" btn" type="button" id="search-submit">
+                    <svg class="text-secondary" style="width:21px;height:21px" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z">
+                        </path>
+                    </svg>
+                </button>
+                <input type="text" class="form-control border-white" placeholder="Filter by..." aria-label="Search"
+                    aria-describedby="search-submit" @change="(v) => {$root.projectFilter = v.target.value}">
+                <button class="btn" type="button" id="search-clear">
+                    <svg class="text-secondary" style="width:21px;height:21px" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2C6.47,2 2,6.47 2,12C2,17.53 6.47,22 12,22C17.53,22 22,17.53 22,12C22,6.47 17.53,2 12,2M14.59,8L12,10.59L9.41,8L8,9.41L10.59,12L8,14.59L9.41,16L12,13.41L14.59,16L16,14.59L13.41,12L16,9.41L14.59,8Z">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+            <router-link to="/project/create" class="text-decoration-none">
+                <button class="d-flex btn btn-outline-success" type="button" id="create-project">
+                    <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M17,14H19V17H22V19H19V22H17V19H14V17H17V14M5,3H19C20.11,3 21,3.89 21,5V12.8C20.39,12.45 19.72,12.2 19,12.08V5H5V19H12.08C12.2,19.72 12.45,20.39 12.8,21H5C3.89,21 3,20.11 3,19V5C3,3.89 3.89,3 5,3M7,7H17V9H7V7M7,11H17V12.08C16.15,12.22 15.37,12.54 14.68,13H7V11M7,15H12V17H7V15Z" />
+                    </svg>
+                    New
+                </button>
+            </router-link>
+        </div>
+
+        <div v-if="this.$root.userProjects == 0">
+            <h3>You do not have any projects</h3>
+            <p>Join a project with a link from the owner or create a new project</p>
+            <router-link to="/project/create" class="text-decoration-none">
+                <button class="d-flex btn btn-outline-success m-auto" type="button" id="create-project">
+                    <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M17,14H19V17H22V19H19V22H17V19H14V17H17V14M5,3H19C20.11,3 21,3.89 21,5V12.8C20.39,12.45 19.72,12.2 19,12.08V5H5V19H12.08C12.2,19.72 12.45,20.39 12.8,21H5C3.89,21 3,20.11 3,19V5C3,3.89 3.89,3 5,3M7,7H17V9H7V7M7,11H17V12.08C16.15,12.22 15.37,12.54 14.68,13H7V11M7,15H12V17H7V15Z" />
+                    </svg>
+                    New
+                </button>
+            </router-link>
+        </div>
+        <div v-else v-for="project in this.$root.filterProjects"
+            class="card text-left py-3 border-bottom border-muted border-0">
+            <div class="card-body">
+                <router-link :to="'/project/' + project.id" class="card-title font-weight-bold h3 text-decoration-none">
+                    {{ project.name }}</router-link>
+                <p class="card-title text-dark">{{ project.description || 'No description set' }}
+                </p>
+                <span class="card-text text-muted">
+                    <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M2 12H4V17H20V12H22V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17M13 12H11V14H13M13 4H11V10H13Z" />
+                    </svg>
+                    {{ project.open_issues }}
+                </span>
+                <span class="card-text text-muted">
+                    <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M18 5H6V7H18M6 9H18V11H6M2 12H4V17H20V12H22V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17M18 13H6V15H18Z" />
+                    </svg>
+                    {{ project.active_issues }}
+                </span>
+                <span class="card-text text-muted">
+                    <svg style="width:16px;height:16px" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M2 12H4V17H20V12H22V17A2 2 0 0 1 20 19H4A2 2 0 0 1 2 17Z" />
+                    </svg>
+                    {{ project.resolved_issues }}
+                </span>
+                <span v-if="project.private" class="badge rounded-pill bg-secondary">Private</span>
+                <span v-if="project.archived" class="badge rounded-pill bg-warning text-dark">Archived</span>
+            </div>
+        </div>
+    </div>
+</div>
