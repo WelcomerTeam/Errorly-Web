@@ -12,6 +12,7 @@ import (
 
 	"context"
 
+	"github.com/TheRockettek/Errorly-Web/pkg/dictionary/idGenerator"
 	"github.com/go-pg/pg/v10"
 	"github.com/gorilla/sessions"
 	jsoniter "github.com/json-iterator/go"
@@ -73,7 +74,7 @@ type Errorly struct {
 
 	Router *MethodRouter
 	Store  *sessions.CookieStore
-	IDGen  *IDGenerator
+	IDGen  *idGenerator.IDGenerator
 }
 
 // NewErrorly creates an Errorly instance.
@@ -217,8 +218,7 @@ func (er *Errorly) Open() (err error) {
 	er.Logger.Info().Msg("Connected to postgres")
 
 	er.Store = sessions.NewCookieStore([]byte(er.Configuration.SessionSecret))
-	er.Router = NewMethodRouter()
-	er.IDGen = NewIDGenerator(epoch, 0)
+	er.IDGen = idGenerator.NewIDGenerator(epoch, 0)
 
 	er.Logger.Debug().Msg("Creating schema")
 	err = createSchema(er.Postgres)
@@ -228,7 +228,7 @@ func (er *Errorly) Open() (err error) {
 	er.Logger.Debug().Msg("Created schema")
 
 	er.Logger.Debug().Msg("Creating endpoints")
-	er.createEndpoints()
+	er.Router = createEndpoints(er)
 	er.Logger.Debug().Msg("Created endpoints")
 
 	fmt.Printf("Serving on %s (Press CTRL+C to quit)\n", er.Configuration.Host)
