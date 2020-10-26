@@ -4,6 +4,6 @@
 
 <script>
 export default {
-  name: "ProjectSettings"
+  name: "ProjectSettings",
 };
 </script>

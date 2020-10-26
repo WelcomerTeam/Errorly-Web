@@ -82,8 +82,9 @@
         v-for="(item, index) in values"
         v-bind:key="index"
         selected="item == value"
-        >{{ item }}</option
       >
+        {{ item }}
+      </option>
     </select>
   </div>
   <span class="badge bg-warning text-dark" v-else
@@ -95,7 +96,7 @@
 export default {
   props: ["type", "id", "label", "values", "value", "disabled", "placeholder"],
   methods: {
-    copyFormInputPassword: function() {
+    copyFormInputPassword: function () {
       var elem = document.createElement("textarea");
       elem.value = this.$el.lastChild.firstChild.value;
       elem.type = "hidden";
@@ -107,9 +108,9 @@ export default {
       document.execCommand("copy");
       elem.parentElement.removeChild(elem);
     },
-    updateValue: function(value) {
+    updateValue: function (value) {
       this.$emit("input", value);
-    }
-  }
+    },
+  },
 };
 </script>

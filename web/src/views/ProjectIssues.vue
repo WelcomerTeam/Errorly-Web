@@ -3,7 +3,7 @@
     <div class="d-flex mb-3">
       <div
         class="input-group input-group-sm border border-secondary rounded"
-        style="width:fit-content;"
+        style="width: fit-content"
       >
         <button
           class="btn btn-sm border-right"
@@ -12,7 +12,7 @@
           aria-expanded="false"
           aria-label="Search filter"
         >
-          <span style="font-size:smaller;">Filters:</span>
+          <span style="font-size: smaller">Filters:</span>
         </button>
         <ul class="dropdown-menu">
           <li v-for="(v, k, index) in filterTemplates" v-bind:key="index">
@@ -85,19 +85,18 @@
         <thead class="card-header">
           <tr class="d-table-row">
             <th class="p-0 align-middle"></th>
-            <th
-              colspan="0"
-              scope="col"
-              class="align-middle"
-              style="width: 1px;"
-            >
+            <th colspan="0" scope="col" class="align-middle" style="width: 1px">
               <input
                 class="form-check-input"
                 type="checkbox"
                 value=""
                 id="flexCheckDefault"
                 aria-label="Select all issue"
-                @click="vm => { $parent.selectAllIssues(vm.target.checked); }"
+                @click="
+                  (vm) => {
+                    $parent.selectAllIssues(vm.target.checked);
+                  }
+                "
               />
             </th>
             <th colspan="6" scope="col" class="settings col-6 align-middle">
@@ -122,7 +121,11 @@
                       class="dropdown-item"
                       v-on:click.prevent="marked = 'none'"
                     >
-                      <svg-icon type="mdi" :height="16" :path="mdiDotsHorizontal" />
+                      <svg-icon
+                        type="mdi"
+                        :height="16"
+                        :path="mdiDotsHorizontal"
+                      />
                       Select Action</a
                     >
                   </li>
@@ -131,7 +134,11 @@
                       class="dropdown-item"
                       v-on:click.prevent="marked = 'assign'"
                     >
-                      <svg-icon type="mdi" :height="16" :path="mdiAccountPlus" />
+                      <svg-icon
+                        type="mdi"
+                        :height="16"
+                        :path="mdiAccountPlus"
+                      />
                       Assign user</a
                     >
                   </li>
@@ -140,7 +147,11 @@
                       class="dropdown-item"
                       v-on:click.prevent="marked = 'deassign'"
                     >
-                      <svg-icon type="mdi" :height="16" :path="mdiAccountRemove" />
+                      <svg-icon
+                        type="mdi"
+                        :height="16"
+                        :path="mdiAccountRemove"
+                      />
                       Deassign user</a
                     >
                   </li>
@@ -210,7 +221,10 @@
                   </li>
                 </ul>
               </div>
-              <div class="btn-group dropright" v-if="marked == 'assign' || marked == 'deassign'">
+              <div
+                class="btn-group dropright"
+                v-if="marked == 'assign' || marked == 'deassign'"
+              >
                 <button
                   class="btn btn-secondary btn-sm dropdown-toggle"
                   type="button"
@@ -259,14 +273,24 @@
                 class="btn btn-outline-secondary btn-sm"
                 aria-label="Execute actions"
                 @click="execute()"
-                :disabled="(marked == 'none') || ((marked == 'assign' || marked == 'deassign') && !assigned) || $parent.getCheckedIssues().length == 0"
+                :disabled="
+                  marked == 'none' ||
+                  ((marked == 'assign' || marked == 'deassign') && !assigned) ||
+                  $parent.getCheckedIssues().length == 0
+                "
               >
-                <div v-if="$parent.executing" style="width:.6rem;height:.6rem;vertical-align:sub;" class="spinner-border" role="status">
+                <div
+                  v-if="$parent.executing"
+                  style="width: 0.6rem; height: 0.6rem; vertical-align: sub"
+                  class="spinner-border"
+                  role="status"
+                >
                   <span class="visually-hidden">Loading...</span>
                 </div>
-                <svg-icon v-else
+                <svg-icon
+                  v-else
                   type="mdi"
-                  style="width:1rem;height:1rem;vertical-align:sub;"
+                  style="width: 1rem; height: 1rem; vertical-align: sub"
                   :path="mdiPlay"
                 />
               </button>
@@ -305,7 +329,7 @@
             <th class="ticket-status" colspan="6">
               <button
                 class="btn"
-                style="padding:0;"
+                style="padding: 0"
                 @click="$parent.starIssue(issue.id, !issue.starred)"
                 aria-label="Star issue"
               >
@@ -344,7 +368,13 @@
                   >
                   {{ $parent.getUsername(issue.created_by_id) || "ghost" }}
                 </span>
-                <svg-icon type="mdi" :height="20" :path="issue.comments_locked ? mdiMessageTextLock : mdiMessageText" />
+                <svg-icon
+                  type="mdi"
+                  :height="20"
+                  :path="
+                    issue.comments_locked ? mdiMessageTextLock : mdiMessageText
+                  "
+                />
                 <span>{{ issue.comment_count }}</span>
                 <svg-icon
                   type="mdi"
@@ -380,7 +410,7 @@
             $parent.project.active_issues +
               $parent.project.open_issues +
               $parent.project.resolved_issues ==
-              0
+            0
           "
         >
           <svg-icon
@@ -441,7 +471,7 @@ import {
   mdiAccountPlus,
   mdiAccountRemove,
   mdiDotsHorizontal,
-  mdiMessageTextLock
+  mdiMessageTextLock,
 } from "@mdi/js";
 
 export default {
@@ -527,7 +557,7 @@ export default {
       mdiMagnify: mdiMagnify,
       mdiCloseCircleOutline: mdiCloseCircleOutline,
       mdiDotsHorizontal: mdiDotsHorizontal,
-      mdiMessageTextLock: mdiMessageTextLock
+      mdiMessageTextLock: mdiMessageTextLock,
     };
   },
   beforeRouteEnter(to, from, next) {
@@ -536,7 +566,7 @@ export default {
         // vm.$parent.fetchIssues();
         vm.$parent.loadIssues({
           page: vm.$parent.page,
-          q: vm.$parent.issue_query
+          q: vm.$parent.issue_query,
         });
       }
     });
@@ -545,7 +575,7 @@ export default {
     execute() {
       var query = {
         issues: qs.stringify(this.$parent.getCheckedIssues()),
-      }
+      };
 
       if (this.marked == "assign") {
         query["action"] = "assign";
@@ -555,7 +585,7 @@ export default {
       if (this.marked == "deassign") {
         query["action"] = "assign";
         query["assigning"] = false;
-        query["assignee_id"] = this.assigned;        
+        query["assignee_id"] = this.assigned;
       }
       if (this.marked == "resolved") {
         query["action"] = "mark_status";
@@ -563,7 +593,7 @@ export default {
       }
       if (this.marked == "active") {
         query["action"] = "mark_status";
-        query["mark_type"] = "EntryActive";        
+        query["mark_type"] = "EntryActive";
       }
       if (this.marked == "open") {
         query["action"] = "mark_status";
@@ -574,15 +604,14 @@ export default {
         query["mark_type"] = "EntryInvalid";
       }
       if (this.marked == "lock") {
-        query["action"] = "lock_comments"
-        query["locking"] = true
+        query["action"] = "lock_comments";
+        query["locking"] = true;
       }
       if (this.marked == "unlock") {
-        query["action"] = "lock_comments"
-        query["locking"] = false
+        query["action"] = "lock_comments";
+        query["locking"] = false;
       }
 
-      console.log(query);
       this.$parent.executeTask(query);
     },
     filterAssignee() {

@@ -12,7 +12,7 @@ Vue.config.productionTip = false;
 
 new Vue({
   router,
-  render: h => h(App),
+  render: (h) => h(App),
   data() {
     return {
       error: "",
@@ -22,7 +22,7 @@ new Vue({
       userProjects: [],
       user: {},
 
-      projectFilter: ""
+      projectFilter: "",
     };
   },
   mounted() {
@@ -32,7 +32,7 @@ new Vue({
     fetchMe() {
       axios
         .get("/api/me")
-        .then(result => {
+        .then((result) => {
           var data = result.data;
           if (data.success) {
             this.userAuthenticated = data.data.authenticated;
@@ -42,7 +42,7 @@ new Vue({
             this.error = data.error;
           }
         })
-        .catch(error => {
+        .catch((error) => {
           if (error.response?.data) {
             this.error = error.response.data.error || error.response.data;
           } else {
@@ -52,6 +52,6 @@ new Vue({
         .finally(() => {
           this.userLoading = false;
         });
-    }
-  }
+    },
+  },
 }).$mount("#app");

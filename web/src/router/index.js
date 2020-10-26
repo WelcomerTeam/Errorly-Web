@@ -2,6 +2,7 @@ import Vue from "vue";
 import VueRouter from "vue-router";
 import VueTimeAgo from "vue-timeago";
 
+import PageNotFound from "../views/PageNotFound.vue";
 import Home from "../views/Home.vue";
 import Projects from "../views/Projects.vue";
 import CreateProject from "../views/CreateProject.vue";
@@ -11,27 +12,30 @@ import ProjectOverview from "../views/ProjectOverview.vue";
 import ProjectIssues from "../views/ProjectIssues.vue";
 import ProjectSettings from "../views/ProjectSettings.vue";
 
+import CreateProjectIssue from "../views/CreateProjectIssue.vue";
+import ViewProjectIssue from "../views/ViewProjectIssue.vue";
+
 Vue.use(VueRouter);
 Vue.use(VueTimeAgo, {
   name: "Timeago",
-  locale: "en"
+  locale: "en",
 });
 
 const routes = [
   {
     path: "/",
     name: "Home",
-    component: Home
+    component: Home,
   },
   {
     path: "/projects",
     name: "Projects",
-    component: Projects
+    component: Projects,
   },
   {
     path: "/project/create",
     name: "CreateProject",
-    component: CreateProject
+    component: CreateProject,
   },
   {
     path: "/project/:id",
@@ -40,20 +44,32 @@ const routes = [
       {
         path: "",
         name: "ProjectOverview",
-        component: ProjectOverview
+        component: ProjectOverview,
       },
       {
         path: "issues",
         name: "ProjectIssues",
-        component: ProjectIssues
+        component: ProjectIssues,
       },
       {
         path: "settings",
         name: "ProjectSettings",
-        component: ProjectSettings
-      }
-    ]
-  }
+        component: ProjectSettings,
+      },
+      {
+        path: "issue/create",
+        component: CreateProjectIssue,
+      },
+      {
+        path: "issue/:issueid",
+        component: ViewProjectIssue,
+      },
+    ],
+  },
+  {
+    path: "*",
+    component: PageNotFound,
+  },
 ];
 
 // {
@@ -69,7 +85,7 @@ const routes = [
 const router = new VueRouter({
   mode: "history",
   base: process.env.BASE_URL,
-  routes
+  routes,
 });
 
 export default router;

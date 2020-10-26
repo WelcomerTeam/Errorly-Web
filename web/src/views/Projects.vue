@@ -17,8 +17,19 @@
           aria-describedby="search-submit"
           v-model="$root.projectFilter"
         />
-        <button class="btn" type="button" id="search-clear" aria-label="Empty query" @click="$root.projectFilter = ''">
-          <svg-icon type="mdi" :width="21" :height="21" :path="mdiCloseCircleOutline" />
+        <button
+          class="btn"
+          type="button"
+          id="search-clear"
+          aria-label="Empty query"
+          @click="$root.projectFilter = ''"
+        >
+          <svg-icon
+            type="mdi"
+            :width="21"
+            :height="21"
+            :path="mdiCloseCircleOutline"
+          />
         </button>
       </div>
       <router-link to="/project/create" class="text-decoration-none">
@@ -27,21 +38,30 @@
           type="button"
           id="create-project"
         >
-          <svg-icon type="mdi" :width="24" :heights="24" :path="mdiTextBoxCheckOutline" />
+          <svg-icon
+            type="mdi"
+            :width="24"
+            :heights="24"
+            :path="mdiTextBoxCheckOutline"
+          />
           New
         </button>
       </router-link>
     </div>
 
-    <div
-      v-if="!this.$root.userAuthenticated"
-      class="text-center py-3"
-    >
+    <div v-if="!this.$root.userAuthenticated" class="text-center py-3">
       <div class="card-body">
         <h3>You are not logged in!</h3>
-        <p class="text-muted">Create an account to create your own projects and contribute to others. Its free</p>
+        <p class="text-muted">
+          Create an account to create your own projects and contribute to
+          others. Its free
+        </p>
         <a href="/login">
-          <button class="btn btn-outline-dark mr-2" type="button" aria-label="Login with Discord">
+          <button
+            class="btn btn-outline-dark mr-2"
+            type="button"
+            aria-label="Login with Discord"
+          >
             <svg-icon type="mdi" :path="mdiDiscord" />
             Login with Discord
           </button>
@@ -60,7 +80,12 @@
           type="button"
           id="create-project"
         >
-          <svg-icon type="mdi" :width="24" :height="24" :path="mdiTextBoxCheckOutline" />
+          <svg-icon
+            type="mdi"
+            :width="24"
+            :height="24"
+            :path="mdiTextBoxCheckOutline"
+          />
           New
         </button>
       </router-link>
@@ -107,11 +132,19 @@
 </template>
 
 <script>
-import { mdiDiscord, mdiMagnify, mdiCloseCircleOutline, mdiTray, mdiTrayFull, mdiTrayAlert, mdiTextBoxCheckOutline } from "@mdi/js";
+import {
+  mdiDiscord,
+  mdiMagnify,
+  mdiCloseCircleOutline,
+  mdiTray,
+  mdiTrayFull,
+  mdiTrayAlert,
+  mdiTextBoxCheckOutline,
+} from "@mdi/js";
 import SvgIcon from "@jamescoyle/vue-icon";
 export default {
   components: {
-    SvgIcon
+    SvgIcon,
   },
   name: "Projects",
   data() {
@@ -122,8 +155,8 @@ export default {
       mdiTray: mdiTray,
       mdiTrayFull: mdiTrayFull,
       mdiTrayAlert: mdiTrayAlert,
-      mdiTextBoxCheckOutline: mdiTextBoxCheckOutline
-    }
+      mdiTextBoxCheckOutline: mdiTextBoxCheckOutline,
+    };
   },
   computed: {
     filterProjects() {
@@ -131,11 +164,11 @@ export default {
         return this.userProjects;
       }
       var filter = this.$root.projectFilter.toLowerCase();
-      return this.$root.userProjects.filter(object => {
+      return this.$root.userProjects.filter((object) => {
         return object.name.toLowerCase().includes(filter);
       });
-    }
-  }
+    },
+  },
 };
 </script>
 

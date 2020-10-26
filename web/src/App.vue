@@ -3,7 +3,7 @@
     <div v-cloak>
       <nav
         class="navbar navbar-expand-sm navbar-dark"
-        style="background: #212529;"
+        style="background: #212529"
       >
         <div class="px-3 container-fluid">
           <router-link class="navbar-brand" to="/">
@@ -38,7 +38,11 @@
                 <ul class="navbar-nav">
                   <li class="nav-item">
                     <a href="/login">
-                      <button class="btn btn-outline-light mr-2" type="button" aria-label="Login with Discord">
+                      <button
+                        class="btn btn-outline-light mr-2"
+                        type="button"
+                        aria-label="Login with Discord"
+                      >
                         <svg-icon type="mdi" :path="mdiDiscord" />
                         Login with Discord
                       </button>
@@ -106,7 +110,12 @@
                       data-toggle="dropdown"
                       aria-expanded="false"
                     >
-                      <img width="24" height="24" :src="this.$root.user.avatar" alt="User profile picture" />
+                      <img
+                        width="24"
+                        height="24"
+                        :src="this.$root.user.avatar"
+                        alt="User profile picture"
+                      />
                     </span>
                     <ul
                       class="dropdown-menu dropdown-menu-right"
@@ -165,13 +174,13 @@ import { mdiDiscord, mdiTextBoxCheckOutline } from "@mdi/js";
 export default {
   components: {
     SvgIcon,
-    Error
+    Error,
   },
   data() {
     return {
       mdiDiscord: mdiDiscord,
-      mdiTextBoxCheckOutline: mdiTextBoxCheckOutline
+      mdiTextBoxCheckOutline: mdiTextBoxCheckOutline,
     };
-  }
+  },
 };
 </script>

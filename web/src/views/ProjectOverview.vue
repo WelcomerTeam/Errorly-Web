@@ -30,19 +30,19 @@ import { mdiLinkVariant } from "@mdi/js";
 
 export default {
   components: {
-    SvgIcon
+    SvgIcon,
   },
   name: "ProjectOverview",
   data() {
     return {
-      mdiLinkVariant: mdiLinkVariant
+      mdiLinkVariant: mdiLinkVariant,
     };
   },
   methods: {
     getHost(url) {
       var _url = new URL(url);
       return _url.host;
-    }
-  }
+    },
+  },
 };
 </script>

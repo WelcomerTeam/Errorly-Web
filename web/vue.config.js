@@ -2,6 +2,7 @@
 const webpack = require("webpack");
 
 module.exports = {
+  runtimeCompiler: true,
   integrity: true,
   pwa: {
     name: "Errorly",
@@ -20,21 +21,21 @@ module.exports = {
       dir: "ltr",
       display: "standalone",
       orientation: "any",
-      prefer_related_applications: false
+      prefer_related_applications: false,
     },
     workboxOptions: {
       skipWaiting: true,
       clientsClaim: true,
-    }
+    },
   },
   configureWebpack: {
     plugins: [
       // new BundleAnalyzerPlugin(),
-      new webpack.ContextReplacementPlugin(/moment[/\\]locale$/, /en/)
+      new webpack.ContextReplacementPlugin(/moment[/\\]locale$/, /en/),
     ],
     externals: {
-      moment: "moment"
-    }
+      moment: "moment",
+    },
   },
   devServer: {
     proxy: {
@@ -44,29 +45,29 @@ module.exports = {
         ws: true,
         changeOrigin: true,
         withCredentials: true,
-        secure: false
+        secure: false,
       },
       "/login": {
         target: "http://127.0.0.1:8001",
         ws: true,
         changeOrigin: true,
         withCredentials: true,
-        secure: false
+        secure: false,
       },
       "/logout": {
         target: "http://127.0.0.1:8001",
         ws: true,
         changeOrigin: true,
         withCredentials: true,
-        secure: false
+        secure: false,
       },
       "/oauth2/callback": {
         target: "http://127.0.0.1:8001",
         ws: true,
         changeOrigin: true,
         withCredentials: true,
-        secure: false
-      }
-    }
-  }
+        secure: false,
+      },
+    },
+  },
 };

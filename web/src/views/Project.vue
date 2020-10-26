@@ -32,7 +32,7 @@
                   title: { display: false },
                   cutoutPercentage: 50,
                   reactive: false,
-                  aspectRatio: 1
+                  aspectRatio: 1,
                 }"
                 :chart-data="{
                   datasets: [
@@ -40,13 +40,13 @@
                       data: [
                         this.project.open_issues,
                         this.project.active_issues,
-                        this.project.resolved_issues
+                        this.project.resolved_issues,
                       ],
                       backgroundColor: ['#0d6efd', '#6c757d', '#28a745'],
-                      borderColor: ['#0256d4', '#555c62', '#1f7f35']
-                    }
+                      borderColor: ['#0256d4', '#555c62', '#1f7f35'],
+                    },
                   ],
-                  labels: ['Open', 'Active', 'Resolved']
+                  labels: ['Open', 'Active', 'Resolved'],
                 }"
               >
               </pie-chart>
@@ -78,7 +78,7 @@
             :class="{
               active:
                 this.$route.path.endsWith(this.project.id + '/') ||
-                this.$route.path.endsWith(this.project.id)
+                this.$route.path.endsWith(this.project.id),
             }"
             aria-current="page"
             href="#"
@@ -131,14 +131,14 @@ import {
   mdiTrayFull,
   mdiTrayAlert,
   mdiCogOutline,
-  mdiInformationOutline
+  mdiInformationOutline,
 } from "@mdi/js";
 import Error from "@/components/Error.vue";
 
 function getProject(projectID, callback) {
   axios
     .get("/api/project/" + projectID)
-    .then(result => {
+    .then((result) => {
       var data = result.data;
       if (data.success) {
         callback(undefined, data.data);
@@ -146,7 +146,7 @@ function getProject(projectID, callback) {
         callback(data.error, {});
       }
     })
-    .catch(error => {
+    .catch((error) => {
       if (error.response?.data) {
         callback(error.response.data.error || error.response.data, {});
       } else {
@@ -160,7 +160,7 @@ export default {
   components: {
     PieChart,
     SvgIcon,
-    Error
+    Error,
   },
   name: "ProjectOverview",
   data() {
@@ -186,14 +186,14 @@ export default {
       mdiTrayFull: mdiTrayFull,
       mdiTrayAlert: mdiTrayAlert,
       mdiCogOutline: mdiCogOutline,
-      mdiInformationOutline: mdiInformationOutline
+      mdiInformationOutline: mdiInformationOutline,
     };
   },
   beforeRouteEnter(to, from, next) {
     var projectID = to.params?.id;
     if (from.params?.id != projectID && projectID != undefined) {
       getProject(to.params.id, (err, project) => {
-        next(vm => vm.setData(err, project));
+        next((vm) => vm.setData(err, project));
       });
     } else {
       next();
@@ -214,30 +214,42 @@ export default {
         var issue = this.issues[issueID];
         issue.checked = toggle;
         this.$set(this.issues, issueID, issue);
-      };
+      }
     },
     getCheckedIssues() {
-      return Object.values(this.issues).filter(issue => { return issue.checked }).map(issue => { return issue.id })
+      return Object.values(this.issues)
+        .filter((issue) => {
+          return issue.checked;
+        })
+        .map((issue) => {
+          return issue.id;
+        });
     },
     executeTask(query) {
       this.executing = true;
       this.issue_error = undefined;
       axios
-        .post("/api/project/" + this.$route.params.id + "/execute", qs.stringify(query), {
-          headers: {
-            "content-type": "application/x-www-form-urlencoded;charset=utf-8"
+        .post(
+          "/api/project/" + this.$route.params.id + "/execute",
+          qs.stringify(query),
+          {
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
           }
-        })
-        .then(result => {
+        )
+        .then((result) => {
           var data = result.data;
           if (data.success) {
-            data.data.issues.forEach(issue => {
-              issue["checked"] = this.issues[issue.id] ? this.issues[issue.id]["checked"] : false; 
+            data.data.issues.forEach((issue) => {
+              issue["checked"] = this.issues[issue.id]
+                ? this.issues[issue.id]["checked"]
+                : false;
               this.$set(this.issues, issue.id, issue);
-            })
+            });
           }
         })
-        .catch(error => {
+        .catch((error) => {
           if (error.response?.data) {
             this.issue_error = error.response.data.error || error.response.data;
           } else {
@@ -246,51 +258,66 @@ export default {
         })
         .finally(() => {
           this.executing = false;
-        })
-      },
+        });
+    },
     starIssue(id, star) {
       this.issues[id].starred = star;
       axios
-        .post("/api/project/" + this.$route.params.id + "/execute", qs.stringify({
-          "action": "star",
-          "issues": qs.stringify([id]),
-          "starring": star,
-        }), {
-          headers: {
-            "content-type": "application/x-www-form-urlencoded;charset=utf-8"
+        .post(
+          "/api/project/" + this.$route.params.id + "/execute",
+          qs.stringify({
+            action: "star",
+            issues: qs.stringify([id]),
+            starring: star,
+          }),
+          {
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
           }
-        })
-        .then(result => {
+        )
+        .then((result) => {
           var data = result.data;
           if (data.success) {
-            data.data.issues.forEach(issue => {
-              issue["checked"] = this.issues[issue.id] ? this.issues[issue.id]["checked"] : false; 
+            data.data.issues.forEach((issue) => {
+              issue["checked"] = this.issues[issue.id]
+                ? this.issues[issue.id]["checked"]
+                : false;
               this.$set(this.issues, issue.id, issue);
-            })
+            });
           }
         })
-        .catch(error => {
+        .catch((error) => {
           if (error.response?.data) {
             this.issue_error = error.response.data.error || error.response.data;
           } else {
             this.issue_error = error.toString();
           }
-        })
+        });
     },
     fetchIssues() {
       var query = {
-        page: this.page
+        page: this.page,
       };
       if (this.issue_query != "") {
         query["q"] = this.issue_query;
       }
       var path = "/project/" + this.$route.params.id + "/issues";
-      if (path != this.$route.path || this.$route.query.page != query["page"] || this.$route.query.q != query["q"]) {
+      if (
+        path != this.$route.path ||
+        this.$route.query.page != query["page"] ||
+        this.$route.query.q != query["q"]
+      ) {
         // Persists
-        this.$router.push({
-          path: path,
-          query: query,
-        }, () => { this.loadIssues(query); });
+        this.$router.push(
+          {
+            path: path,
+            query: query,
+          },
+          () => {
+            this.loadIssues(query);
+          }
+        );
       }
       //  else {
       //   this.loadIssues(query);
@@ -302,15 +329,15 @@ export default {
       this.issue_error = undefined;
       axios
         .get("/api/project/" + this.$route.params.id + "/issues", {
-          params: query
+          params: query,
         })
-        .then(result => {
+        .then((result) => {
           var data = result.data;
           if (data.success) {
             var userQuery = [];
             this.total_issues = data.data.total_issues;
             this.page = data.data.page;
-            data.data.issues.forEach(issue => {
+            data.data.issues.forEach((issue) => {
               issue.checked = false;
               if (
                 issue.assignee_id != 0 &&
@@ -333,13 +360,13 @@ export default {
               axios
                 .get("/api/project/" + this.$route.params.id + "/lazy", {
                   params: {
-                    q: qs.stringify(userQuery)
-                  }
+                    q: qs.stringify(userQuery),
+                  },
                 })
-                .then(result => {
+                .then((result) => {
                   var data = result.data;
                   if (data.success) {
-                    Object.values(data.data.users).forEach(user => {
+                    Object.values(data.data.users).forEach((user) => {
                       // We will use $set as this overcomes a Vue limitation
                       // where adding new properties to an object will not
                       // trigger changes.
@@ -350,7 +377,7 @@ export default {
                     this.issue_error = data.error;
                   }
                 })
-                .catch(error => {
+                .catch((error) => {
                   if (error.response?.data) {
                     this.issue_error =
                       error.response.data.error || error.response.data;
@@ -368,7 +395,7 @@ export default {
             this.issue_error = data.error;
           }
         })
-        .catch(error => {
+        .catch((error) => {
           if (error.response?.data) {
             this.issue_error = error.response.data.error || error.response.data;
           } else {
@@ -403,8 +430,8 @@ export default {
         // this.page = response.page;
         // this.total_issues = response.total_issues;
       }
-    }
-  }
+    },
+  },
 };
 </script>
 

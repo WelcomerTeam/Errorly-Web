@@ -85,10 +85,10 @@ import FormInput from "@/components/FormInput.vue";
 
 export default {
   components: {
-    FormInput
+    FormInput,
   },
   name: "CreateProject",
-  data: function() {
+  data: function () {
     return {
       error: "",
       project: {
@@ -97,8 +97,8 @@ export default {
         description: "",
         url: "",
         private: false,
-        limited: false
-      }
+        limited: false,
+      },
     };
   },
   methods: {
@@ -126,10 +126,10 @@ export default {
       axios
         .post("/api/projects", qs.stringify(project), {
           headers: {
-            "content-type": "application/x-www-form-urlencoded;charset=utf-8"
-          }
+            "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+          },
         })
-        .then(result => {
+        .then((result) => {
           var data = result.data;
           if (data.success) {
             this.$root.userProjects.unshift(data.data);
@@ -139,11 +139,11 @@ export default {
             this.error = data.error;
           }
         })
-        .catch(error => {
+        .catch((error) => {
           var data = error.response.data;
           this.error = data.error;
         });
-    }
-  }
+    },
+  },
 };
 </script>

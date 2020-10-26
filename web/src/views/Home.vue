@@ -30,7 +30,7 @@
         </div>
       </div>
     </div>
-    <div style="overflow: hidden;">
+    <div style="overflow: hidden">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
         <path
           fill="#f8f9fa"
@@ -50,13 +50,13 @@ import { mdiDiscord, mdiTextBoxCheckOutline } from "@mdi/js";
 export default {
   name: "Home",
   components: {
-    SvgIcon
+    SvgIcon,
   },
   data() {
     return {
       mdiDiscord: mdiDiscord,
-      mdiTextBoxCheckOutline: mdiTextBoxCheckOutline
+      mdiTextBoxCheckOutline: mdiTextBoxCheckOutline,
     };
-  }
+  },
 };
 </script>
