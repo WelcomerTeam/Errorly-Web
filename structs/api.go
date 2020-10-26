@@ -13,6 +13,8 @@ const (
 	// DiscordUser is a user who has authenticated with discord
 	// OAuth2
 	DiscordUser UserType = iota
+	// IntegrationUser is a 3rd party managed application
+	IntegrationUser
 )
 
 // WebhookType signifies how the payload should be sent.
@@ -88,15 +90,23 @@ func ParseEntryType(entryTypeStr string) (EntryType, error) {
 
 // User contains the structure of a user
 type User struct {
-	ID       int64    `json:"id"`
-	Name     string   `json:"name"`
-	Avatar   string   `json:"avatar"`
-	UserType UserType `json:"type"`
-	HookID   int64    `json:"hook_id,omitempty"` // Used with usertype to reference an external ID (such as a discord id)
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+
+	Avatar   string   `json:"avatar,omitempty"`
+	UserType UserType `json:"-"`
 
 	CreatedAt time.Time `json:"created_at" pg:"default:now()"`
 
-	ProjectIDs []int64 `json:"project_ids"`
+	// User values
+	HookID     int64   `json:"-"` // Used with usertype to reference an external ID (such as a discord id)
+	ProjectIDs []int64 `json:"-"`
+
+	// Integration values
+	ProjectID   int64 `json:"project_id,omitempty"`
+	Integration bool  `json:"integration" sql:",notnull"`
+	CreatedBy   *User `json:"created_by,omitempty" pg:"rel:has-one"`
+	CreatedByID int64 `json:"created_by_id,omitempty" sql:",notnull"`
 
 	Token string `json:"-"`
 }
@@ -107,13 +117,16 @@ type Project struct {
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
 	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id"`
+	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
 
-	Integrations []Integration `json:"integrations" pg:"rel:has-many,join_fk:project_id"`
-	Webhooks     []Webhook     `json:"webhooks" pg:"rel:has-many,join_fk:project_id"`
-	Issues       []IssueEntry  `json:"issues" pg:"rel:has-many,join_fk:project_id"`
+	Integrations []User       `json:"integrations" pg:"rel:has-many,join_fk:project_id"`
+	Webhooks     []Webhook    `json:"webhooks" pg:"rel:has-many,join_fk:project_id"`
+	Issues       []IssueEntry `json:"issues,omitempty" pg:"rel:has-many,join_fk:project_id"`
 
 	Settings ProjectSettings `json:"settings"`
+
+	// Cached values to quickly lookup issues
+	StarredIssues int `json:"starred_issues"`
 
 	// Cached values that change on an event in order to reduce lookup times
 	OpenIssues     int `json:"open_issues"`
@@ -127,13 +140,13 @@ type ProjectSettings struct {
 	Background  string `json:"background"`   // URI for background of image
 
 	Description string `json:"description"`
-	URL         string `json:"url"` // Link to a project appopriate URL. Will not show if left blank.
+	URL         string `json:"url"` // Link to a project appropriate URL. Will not show if left blank.
 
-	Archived bool `json:"archived"` // When archived, no new issues can be made until unarchived by creator
-	Private  bool `json:"private"`  // If a project is private, users can only view it if they have been added as a contributor
+	Archived bool `json:"archived" sql:",notnull"` // When archived, no new issues can be made until unarchived by creator
+	Private  bool `json:"private" sql:",notnull"`  // If a project is private, users can only view it if they have been added as a contributor
 
-	Limited        bool    `json:"limited"`         // When enabled, only contributes can create errors
-	ContributorIDs []int64 `json:"contributor_ids"` // Contributors for project
+	Limited        bool    `json:"limited" sql:",notnull"` // When enabled, only contributes can create errors
+	ContributorIDs []int64 `json:"contributor_ids"`        // Contributors for project
 }
 
 // Webhook contains the structure of a webhook integration
@@ -141,31 +154,17 @@ type Webhook struct {
 	ID        int64 `json:"id"`
 	ProjectID int64 `json:"project_id"`
 
-	Active   bool  `json:"active"`   // Boolean if it is enabled
-	Failures uint8 `json:"failures"` // If 4 failures sending webhook, will disable webhook
+	Active   bool  `json:"active" sql:",notnull"` // Boolean if it is enabled
+	Failures uint8 `json:"failures"`              // If 4 failures sending webhook, will disable webhook
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
-	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id"`
+	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
+	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
 
 	URL         string      `json:"url"`
 	Type        WebhookType `json:"type"`
-	JSONContent bool        `json:"json_content"` // When true, uses json else urlencoded
-	Secret      string      `json:"secret"`       // Secret to send in the header to confirm origin
-}
-
-// Integration contains the structure of an integration
-type Integration struct {
-	ID        int64 `json:"id"`
-	ProjectID int64 `json:"project_id"`
-
-	Name string `json:"name"`
-
-	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
-	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id"`
-
-	Token string `json:"token"`
+	JSONContent bool        `json:"json_content" sql:",notnull"` // When true, uses json else urlencoded
+	Secret      string      `json:"secret"`                      // Secret to send in the header to confirm origin
 }
 
 // IssueEntry contains the structure of an issue entry
@@ -173,12 +172,12 @@ type IssueEntry struct {
 	ID        int64 `json:"id"`
 	ProjectID int64 `json:"project_id"`
 
-	Starred bool `json:"starred"`
+	Starred bool `json:"starred" sql:",notnull"`
 
 	Type        EntryType `json:"type"`
 	Occurrences int       `json:"occurrences"`
-	Assignee    User      `json:"assignee" pg:"rel:has-one"`
-	AssigneeID  int64     `json:"assignee_id"`
+	Assignee    User      `json:"assignee,omitempty" pg:"rel:has-one"`
+	AssigneeID  int64     `json:"assignee_id" sql:",notnull"`
 
 	Error       string `json:"error"`
 	Function    string `json:"function"`
@@ -189,11 +188,12 @@ type IssueEntry struct {
 	LastModified time.Time `json:"last_modified" pg:"default:now()"`
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
-	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
-	CreatedByID int64     `json:"creator_by_id"`
+	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
+	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
 
-	CommentsLocked bool      `json:"comments_locked"`
-	Comments       []Comment `json:"comment_ids" pg:"rel:has-many,join_fk:issue_id"`
+	CommentCount   int64     `json:"comment_count" sql:",notnull"`
+	CommentsLocked bool      `json:"comments_locked" sql:",notnull"`
+	Comments       []Comment `json:"comment_ids,omitempty" pg:"rel:has-many,join_fk:issue_id"`
 }
 
 // Comment contains the structure of an issue comment
@@ -202,11 +202,11 @@ type Comment struct {
 	IssueID int64 `json:"issue_id"`
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
-	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id"`
+	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
+	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
 
 	Type           ContentType `json:"type"`
 	Content        string      `json:"content,omitempty"`
 	IssueMarked    EntryType   `json:"issue_marked,omitempty"`
-	CommentsOpened bool        `json:"comments_opened,omitempty"`
+	CommentsOpened bool        `json:"comments_opened,omitempty" sql:",notnull"`
 }

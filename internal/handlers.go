@@ -1,38 +1,257 @@
 package errorly
 
 import (
+	"encoding/csv"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/TheRockettek/Errorly-Web/pkg/dictionary"
 	"github.com/TheRockettek/Errorly-Web/structs"
+	"github.com/derekstavis/go-qs"
 	"github.com/go-pg/pg/v10"
+	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-uuid"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
+
+// Issues per page
+const pageLimit = 25 // TODO: Move to webapp
+
+// func parseJSONForm(r *http.Request) (vars map[string]string, err error) {
+// 	err = json.NewDecoder(r.Body).Decode(&vars)
+// 	return
+// }
+
+func passResponse(rw http.ResponseWriter, data interface{}, success bool, status int) {
+	var resp []byte
+	var err error
+	if success {
+		resp, err = json.Marshal(structs.BaseResponse{
+			Success: true,
+			Data:    data,
+		})
+	} else {
+		resp, err = json.Marshal(structs.BaseResponse{
+			Success: false,
+			Error:   data.(string),
+		})
+	}
+
+	if err != nil {
+		resp, _ := json.Marshal(structs.BaseResponse{
+			Success: false,
+			Error:   err.Error(),
+		})
+		http.Error(rw, string(resp), http.StatusInternalServerError)
+		return
+	}
+
+	if success {
+		rw.WriteHeader(status)
+		rw.Write(resp)
+	} else {
+		http.Error(rw, string(resp), status)
+	}
+	return
+}
+
+func verifyProjectVisibility(er *Errorly, rw http.ResponseWriter, vars map[string]string, user *structs.User, auth bool) (project structs.Project, viewable bool, elevated bool, ok bool) {
+	// Retrieve project_id from /project/{project_id}...
+	_projectID, ok := vars["project_id"]
+
+	if !ok {
+		ok = false
+		passResponse(rw, "Missing Project ID", false, http.StatusBadRequest)
+		return
+	}
+
+	// Check projectID is a valid number
+	projectID, err := strconv.ParseInt(_projectID, 10, 64)
+	if err != nil {
+		ok = false
+		passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+		return
+	}
+	// Now we have a possibly valid ID we will first get the project
+	project = structs.Project{}
+	err = er.Postgres.Model(&project).Where("project.id = ?", projectID).Relation("Webhooks").Relation("Integrations").Select()
+	if err != nil {
+		if err == pg.ErrNoRows {
+			// Invalid project ID
+			ok = false
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		// Unexpected error
+		ok = false
+		passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+		return
+	}
+
+	viewable = true
+	elevated = false
+
+	// If the project is private, check if the user is able to view
+	if project.Settings.Private {
+		viewable = false
+	}
+
+	// Check if the user is able to view
+	// (if there is a user logged in)
+	if auth {
+		for _, uid := range project.Settings.ContributorIDs {
+			if uid == user.ID {
+				viewable = true
+				elevated = true
+			}
+		}
+		if user.ID == project.CreatedByID {
+			elevated = true
+			viewable = true
+		}
+	}
+
+	return project, viewable, elevated, true
+}
+
+func parseSorting(s string) string {
+	if strings.ToUpper(s) == "DESC" {
+		return "DESC"
+	}
+	return "ASC"
+}
+
+func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query string, userID int64) (issues []structs.IssueEntry, totalissues int, err error) {
+	// sort:created_by-desc
+	_issues := make([]structs.IssueEntry, 0, limit)
+
+	initialQuery := er.Postgres.Model(&_issues).Where("issue_entry.project_id = ?", projectID)
+
+	query = strings.ReplaceAll(query, `'`, `"`)
+	r := csv.NewReader(strings.NewReader(query))
+	r.Comma = ' '
+
+	parts, err := r.Read()
+	if err != nil {
+		return
+	}
+
+	fuzzyEntries := make([]string, 0)
+	for _, part := range parts {
+		subpart := strings.Split(part, ":")
+		if len(subpart) < 2 {
+			fuzzyEntries = append(fuzzyEntries, subpart[0])
+		} else {
+			finger, thumb := subpart[0], subpart[1]
+			switch finger {
+			case "sort":
+				thumbvalues := strings.Split(thumb, "-")
+				if len(thumbvalues) >= 1 {
+					if len(thumbvalues) == 1 {
+						thumbvalues = append(thumbvalues, "DESC")
+					}
+					switch thumb := strings.ToLower(thumbvalues[0]); thumb {
+					case "starred", "type", "occurrences", "assignee_id", "error", "function",
+						"checkpoint", "last_modified", "created_at", "comment_count":
+						initialQuery = initialQuery.Order(thumb + " " + parseSorting(thumbvalues[1]))
+					}
+				}
+			case "is":
+				switch strings.ToLower(thumb) {
+				case "active":
+					initialQuery = initialQuery.Where("type = ?", structs.EntryActive)
+				case "open":
+					initialQuery = initialQuery.Where("type = ?", structs.EntryOpen)
+				case "invalid":
+					initialQuery = initialQuery.Where("type = ?", structs.EntryInvalid)
+				case "resolved":
+					initialQuery = initialQuery.Where("type = ?", structs.EntryResolved)
+				case "starred":
+					initialQuery = initialQuery.Where("starred = ?", true)
+				}
+			case "assignee":
+				switch strings.ToLower(thumb) {
+				case "@me":
+					if userID != 0 {
+						initialQuery = initialQuery.Where("assignee_id = ?", userID)
+					}
+				case "no":
+					initialQuery = initialQuery.Where("assignee_id = ?", 0)
+				default:
+					println("Assignee is ", thumb)
+					id, err := strconv.Atoi(thumb)
+					if err == nil {
+						println("OK")
+						initialQuery = initialQuery.Where("assignee_id = ?", id)
+					}
+				}
+				// new querys
+				// case "has":
+				// 	// assignee
+				// 	// traceback
+				// 	// messages
+				// 	// star
+				// case "no":
+				// 	// assignee
+				// 	// traceback
+				// 	// messages
+				// 	// star
+			}
+		}
+	}
+
+	totalissues, err = initialQuery.Limit(limit).Offset(limit * page).SelectAndCount()
+	issues = make([]structs.IssueEntry, 0, len(_issues))
+
+	if len(fuzzyEntries) > 0 {
+		for _, issue := range _issues {
+			for _, fuzz := range fuzzyEntries {
+				if fuzzy.Match(fuzz, issue.Error) {
+					issues = append(issues, issue)
+					break
+				}
+				if fuzzy.Match(fuzz, issue.Description) {
+					issues = append(issues, issue)
+					break
+				}
+			}
+		}
+	} else {
+		issues = _issues
+	}
+
+	// this is sort:starred-desc sort:type-desc sort:created_at-desc sort:occurrences-desc
+	// totalissues, err = er.Postgres.Model(&issues).Where("issue_entry.project_id = ?", projectID).Relation("CreatedBy").Relation("Assignee").Order("starred DESC").Order("type DESC").Order("created_at DESC").Order("occurrences DESC").Limit(limit).Offset(limit * page).SelectAndCount()
+
+	return
+}
 
 // LogoutHandler handles clearing a user session
 func LogoutHandler(er *Errorly) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
 		session, _ := er.Store.Get(r, sessionName)
-		defer session.Save(r, w)
+		defer session.Save(r, rw)
 
 		session.Values = make(map[interface{}]interface{})
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		http.Redirect(rw, r, "/", http.StatusTemporaryRedirect)
 	}
 }
 
 // LoginHandler handles CSRF and AuthCode redirection
 func LoginHandler(er *Errorly) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
 		session, _ := er.Store.Get(r, sessionName)
-		defer session.Save(r, w)
+		defer session.Save(r, rw)
 
 		// Create a simple CSRF string to verify clients and 500 if we
 		// cannot generate one.
 		csrfString, err := uuid.GenerateUUID()
 		if err != nil {
-			http.Error(w, "Internal server error: "+err.Error(), 500)
+			http.Error(rw, "Internal server error: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -41,28 +260,28 @@ func LoginHandler(er *Errorly) http.HandlerFunc {
 		session.Values["oauth_csrf"] = csrfString
 
 		url := er.Configuration.OAuth.AuthCodeURL(csrfString)
-		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+		http.Redirect(rw, r, url, http.StatusTemporaryRedirect)
 	}
 }
 
 // OAuthCallbackHandler handles authenticating discord OAuth and creating
 // a user profile if necessary
 func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
 		session, _ := er.Store.Get(r, sessionName)
-		defer session.Save(r, w)
+		defer session.Save(r, rw)
 
 		// Validate the CSRF in the session and in the HTTP request.
 		// If there is no CSRF in the session it is likely our fault :)
 		_csrfString := r.URL.Query().Get("state")
 		csrfString, ok := session.Values["oauth_csrf"].(string)
 		if !ok {
-			http.Error(w, "Missing CSRF state", http.StatusInternalServerError)
+			http.Error(rw, "Missing CSRF state", http.StatusInternalServerError)
 			return
 		}
 
 		if _csrfString != csrfString {
-			http.Error(w, "Mismatched CSRF states", http.StatusUnauthorized)
+			http.Error(rw, "Mismatched CSRF states", http.StatusUnauthorized)
 		}
 
 		// Just to be sure, remove the CSRF after we have compared the CSRF
@@ -72,27 +291,27 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 		code := r.URL.Query().Get("code")
 		token, err := er.Configuration.OAuth.Exchange(er.ctx, code)
 		if err != nil {
-			http.Error(w, "Failed to exchange code: "+err.Error(), http.StatusInternalServerError)
+			http.Error(rw, "Failed to exchange code: "+err.Error(), http.StatusInternalServerError)
 		}
 
 		// Create a client with our exchanged token and retrieve a user.
 		client := er.Configuration.OAuth.Client(er.ctx, token)
 		resp, err := client.Get(discordUsersMe)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		discordUserResponse := &DiscordUser{}
 		err = json.Unmarshal(body, &discordUserResponse)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -120,11 +339,11 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 
 				_, err = er.Postgres.Model(user).WherePK().Insert()
 				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					http.Error(rw, err.Error(), http.StatusInternalServerError)
 				}
 				session.Values["token"] = token
 			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
@@ -137,22 +356,22 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 
 			_, err = er.Postgres.Model(user).WherePK().Update()
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
 			}
 			session.Values["token"] = token
 		}
 
 		// Once the user has logged in, send them back to the home page.
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		http.Redirect(rw, r, "/", http.StatusTemporaryRedirect)
 	}
 }
 
 // APIMeHandler handles the /api/me request which returns the user
 // object and a list of partial project objects
 func APIMeHandler(er *Errorly) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
 		session, _ := er.Store.Get(r, sessionName)
-		defer session.Save(r, w)
+		defer session.Save(r, rw)
 
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
@@ -190,7 +409,7 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 				user.ProjectIDs = sanitizedProjectIDs
 				_, err := er.Postgres.Model(project).WherePK().Update()
 				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					http.Error(rw, err.Error(), http.StatusInternalServerError)
 					return
 				}
 			}
@@ -199,62 +418,384 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 			projects = make([]structs.PartialProject, 0)
 		}
 
-		resp, err := json.Marshal(structs.BaseResponse{
-			Success: true,
-			Data: structs.APIMe{
-				Authenticated: auth,
-				User:          user,
-				Projects:      projects,
-			}})
-		if err != nil {
-			// If we ever are here we've fucked up
-			resp, _ := json.Marshal(structs.BaseResponse{
-				Success: false,
-				Error:   err.Error(),
-			})
-			http.Error(w, string(resp), http.StatusInternalServerError)
-			return
+		// Reverse projects list
+		for i, j := 0, len(projects)-1; i < j; i, j = i+1, j-1 {
+			projects[i], projects[j] = projects[j], projects[i]
 		}
 
-		w.WriteHeader(http.StatusOK)
-		w.Write(resp)
+		passResponse(rw, structs.APIMe{
+			Authenticated: auth,
+			User:          user,
+			Projects:      projects,
+		}, true, http.StatusOK)
 	}
 }
 
-// APIDictionaryHandler handles the generation of a page dictionary used
-// by vue-router.
-func APIDictionaryHandler(er *Errorly) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// APIProjectCreateHandler creates a new project and
+// returns the project made.
+func APIProjectCreateHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
 		session, _ := er.Store.Get(r, sessionName)
-		defer session.Save(r, w)
+		defer session.Save(r, rw)
 
-		// This function will return a PageDictionary object
-		page, err := dictionary.GeneratePageDictionary(dictionaryPath, dictionaryOutputPath)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		// vars, err := parseJSONForm(r)
+		// if err != nil {
+		// 	er.Logger.Error().Err(err).Msg("Failed to parse json form")
+		// 	rw.WriteHeader(http.StatusBadRequest)
+		// 	return
+		// }
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		resp, err := json.Marshal(structs.BaseResponse{
-			Success: true,
-			Data:    page})
-		if err != nil {
-			resp, _ := json.Marshal(structs.BaseResponse{
-				Success: false,
-				Error:   err.Error(),
-			})
-			http.Error(w, string(resp), http.StatusInternalServerError)
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be signed into create a project", false, http.StatusForbidden)
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		w.Write(resp)
+		projectName := r.PostFormValue("display_name")
+		if len(projectName) < 3 {
+			passResponse(rw, "Invalid name was passed", false, http.StatusBadRequest)
+			return
+		}
+
+		projectURL := r.PostFormValue("url")
+		if projectURL != "" {
+			_, err := url.Parse(projectURL)
+			if err != nil {
+				passResponse(rw, "Invalid URL was passed", false, http.StatusBadRequest)
+			}
+		}
+
+		projectPrivate, err := strconv.ParseBool(r.PostFormValue("private"))
+		if err != nil {
+			projectPrivate = false
+		}
+
+		projectLimited, err := strconv.ParseBool(r.PostFormValue("limited"))
+		if err != nil {
+			projectLimited = false
+		}
+
+		userProjects := make([]structs.Project, 0)
+		err = er.Postgres.Model(&userProjects).Where("created_by_id = ?", user.ID).Select()
+
+		for _, userProject := range userProjects {
+			if userProject.Settings.DisplayName == projectName {
+				passResponse(rw, "You cannot have multiple projects with the same name", false, http.StatusBadRequest)
+				return
+			}
+		}
+
+		project := structs.Project{
+			ID: er.IDGen.GenerateID(),
+
+			CreatedAt:   time.Now().UTC(),
+			CreatedByID: user.ID,
+
+			Integrations: make([]structs.User, 0),
+			Webhooks:     make([]structs.Webhook, 0),
+
+			Settings: structs.ProjectSettings{
+				DisplayName: projectName,
+
+				Description: r.PostFormValue("description"),
+				URL:         projectURL,
+
+				Archived: false,
+				Private:  projectPrivate,
+
+				Limited: projectLimited,
+			},
+		}
+
+		_, err = er.Postgres.Model(&project).Insert()
+		if err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to insert project")
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		user.ProjectIDs = append(user.ProjectIDs, project.ID)
+		_, err = er.Postgres.Model(&user).WherePK().Update()
+		if err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to update user projects")
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		passResponse(rw, structs.PartialProject{
+			ID:             project.ID,
+			Name:           project.Settings.DisplayName,
+			Description:    project.Settings.Description,
+			Archived:       project.Settings.Archived,
+			Private:        project.Settings.Private,
+			OpenIssues:     project.OpenIssues,
+			ActiveIssues:   project.ActiveIssues,
+			ResolvedIssues: project.ResolvedIssues,
+		}, true, http.StatusOK)
 	}
 }
 
-// func Handler(er *Errorly) http.HandlerFunc {
-// 	return
-// }
+// APIProjectHandler returns the initial project information
+// and the first page of the project issues.
+func APIProjectHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		// Retrieve project and user permissions
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !elevated {
+			project.Integrations = make([]structs.User, 0)
+			project.Webhooks = make([]structs.Webhook, 0)
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		// contributors := make(map[int64]structs.PartialUser)
+		// for _, contributorID := range project.Settings.ContributorIDs {
+		// 	contributor := structs.User{}
+		// 	err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select()
+		// 	if err != nil {
+		// 		er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
+		// 	} else {
+		// 		contributors[contributor.ID] = structs.PartialUser{
+		// 			ID:     contributor.ID,
+		// 			Name:   contributor.Name,
+		// 			Avatar: contributor.Avatar,
+		// 		}
+		// 	}
+		// }
+
+		// contributors[project.CreatedBy.ID] = structs.PartialUser{
+		// 	ID:     project.CreatedBy.ID,
+		// 	Name:   project.CreatedBy.Name,
+		// 	Avatar: project.CreatedBy.Avatar,
+		// }
+
+		passResponse(rw, structs.APIProject{
+			Project: project,
+			// Contributors: contributors,
+		}, true, http.StatusOK)
+	}
+}
+
+// This simply returns a true or false if the id is from a contributor or owner
+func isContributor(project structs.Project, id int64) bool {
+	if id == project.CreatedByID {
+		return true
+	}
+	for _, b := range project.Integrations {
+		if b.ID == id {
+			return true
+		}
+	}
+	for _, b := range project.Settings.ContributorIDs {
+		if b == id {
+			return true
+		}
+	}
+	return false
+}
+
+// APIProjectLazyHandler returns a list of partial users based on the passed user ids query
+func APIProjectLazyHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		contributorIDs := make([]int64, 0)
+
+		query, err := qs.Unmarshal(r.URL.Query().Get("q"))
+		if err != nil {
+			passResponse(rw, "Invalid query passed", false, http.StatusBadRequest)
+			return
+		}
+
+		for _, v := range query {
+			if id, ok := v.(string); ok {
+				if _id, err := strconv.Atoi(id); err == nil {
+					contributorIDs = append(contributorIDs, int64(_id))
+				} else {
+					er.Logger.Error().Err(err).Msgf("Failed to convert ID '%v' to int64", v)
+				}
+			} else {
+				er.Logger.Error().Msgf("Failed to convert '%v' to string", v)
+			}
+		}
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		// Retrieve project and user permissions
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		contributors := make(map[int64]structs.PartialUser)
+		for _, contributorID := range contributorIDs {
+			_, ok := contributors[contributorID]
+			if ok {
+				// Do not fetch the user if we already have fetched them
+				continue
+			}
+
+			if isContributor(project, contributorID) {
+				contributor := structs.User{}
+				err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select()
+				if err != nil {
+					er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
+				} else {
+					contributors[contributor.ID] = structs.PartialUser{
+						ID:          contributor.ID,
+						Name:        contributor.Name,
+						Avatar:      contributor.Avatar,
+						Integration: contributor.Integration,
+					}
+				}
+			}
+		}
+
+		passResponse(rw, structs.APIProjectLazy{
+			Users: contributors,
+			IDs:   contributorIDs,
+		}, true, http.StatusOK)
+	}
+}
+
+// APIProjectIssueHandler returns paginated results
+func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		urlQuery := r.URL.Query()
+
+		// Get query from search
+		query := urlQuery.Get("q")
+		if query == "" {
+			query = "sort:created_by-asc"
+		}
+
+		// We should get a limit argument here but at the moment
+		// we will hardcode 25 per page.
+		_pageLimit := pageLimit
+
+		// Retrieve page argument from URL
+		_page := r.FormValue("page")
+		if _page == "" {
+			passResponse(rw, "Page argument is missing", false, http.StatusBadRequest)
+			return
+		}
+
+		// Check page is a valid number. We will use the first page
+		// argument provided as multiple could be passed.
+		page, err := strconv.Atoi(_page)
+		if err != nil {
+			passResponse(rw, "Page argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		// Retrieve project_id from /project/{project_id}
+		_projectID, ok := vars["project_id"]
+		if !ok {
+			passResponse(rw, "Project ID is missing", false, http.StatusBadRequest)
+			return
+		}
+
+		// Check projectID is a valid number
+		projectID, err := strconv.ParseInt(_projectID, 10, 64)
+		if err != nil {
+			passResponse(rw, "Project ID argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		// Now we have a possibly valid ID we will first get the project
+		project := &structs.Project{}
+		err = er.Postgres.Model(project).Where("project.id = ?", projectID).Relation("Webhooks").Select()
+		if err != nil {
+			if err == pg.ErrNoRows {
+				passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+				return
+			}
+
+			er.Logger.Error().Err(err).Msg("Failed to retrieve project")
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		// If the project is private, check if the user is able to view.
+		var viewable bool
+		if project.Settings.Private {
+			viewable = false
+			if auth {
+				if user.ID == project.CreatedByID {
+					viewable = true
+				} else {
+					for _, uid := range project.Settings.ContributorIDs {
+						if uid == user.ID {
+							viewable = true
+							break
+						}
+					}
+				}
+			}
+		} else {
+			viewable = true
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		issues, totalissues, err := fetchProjectIssues(er, project.ID, _pageLimit, page, query, user.ID)
+
+		passResponse(rw, structs.APIProjectIssues{
+			Page:        page,
+			TotalIssues: totalissues,
+			Issues:      issues,
+		}, true, http.StatusOK)
+	}
+}
 
 // func Handler(er *Errorly) http.HandlerFunc {
 // 	return

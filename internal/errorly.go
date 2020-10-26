@@ -6,13 +6,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
-	"strings"
+	"strconv"
 	"time"
 
 	"context"
 
-	idgenerator "github.com/TheRockettek/Errorly-Web/pkg/dictionary/idgenerator"
+	idgenerator "github.com/TheRockettek/Errorly-Web/pkg/idgenerator"
 	"github.com/go-pg/pg/v10"
 	"github.com/gorilla/sessions"
 	jsoniter "github.com/json-iterator/go"
@@ -75,6 +74,9 @@ type Errorly struct {
 	Router *MethodRouter
 	Store  *sessions.CookieStore
 	IDGen  *idgenerator.IDGenerator
+
+	distHandler fasthttp.RequestHandler
+	fs          *fasthttp.FS
 }
 
 // NewErrorly creates an Errorly instance.
@@ -130,6 +132,18 @@ func NewErrorly(logger io.Writer) (er *Errorly, err error) {
 	er.Logger = zerolog.New(mw).With().Timestamp().Logger()
 	er.Logger.Info().Msg("Logging configured")
 
+	er.fs = &fasthttp.FS{
+		Root:               "web/dist",
+		IndexNames:         []string{"index.html"},
+		GenerateIndexPages: true,
+		Compress:           true,
+		AcceptByteRange:    true,
+		CacheDuration:      time.Hour * 24,
+		PathNotFound:       fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) { return }),
+	}
+	er.distHandler = er.fs.NewRequestHandler()
+	// er.distHandler = fasthttp.FSHandler("web/dist", 0)
+
 	return
 }
 
@@ -153,43 +167,47 @@ func (er *Errorly) LoadConfiguration(path string) (configuration *Configuration,
 
 // HandleRequest handles incoming HTTP requests
 func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
-	path := string(ctx.Request.URI().Path())
+	start := time.Now()
+	var processingMS int64
 
 	defer func() {
-		fmt.Printf("%s %s %s %d\n",
+		var log *zerolog.Event
+		statusCode := ctx.Response.StatusCode()
+		switch {
+		case (statusCode >= 400 && statusCode <= 499):
+			log = er.Logger.Warn()
+		case (statusCode >= 500 && statusCode <= 599):
+			log = er.Logger.Error()
+		default:
+			log = er.Logger.Info()
+		}
+		log.Msgf("%s %s %s %d %d %dms",
 			ctx.RemoteAddr(),
 			ctx.Request.Header.Method(),
 			ctx.Request.URI().Path(),
-			ctx.Response.StatusCode())
+			statusCode,
+			len(ctx.Response.Body()),
+			processingMS,
+		)
 	}()
 
-	if strings.HasPrefix(path, "/static") {
-		root, _ := os.Getwd()
-		_, filename := filepath.Split(path)
-		filepath := filepath.Join(root, "web/static", filename)
-
-		if _, err := os.Stat(filepath); err != nil {
-			if os.IsNotExist(err) {
-				ctx.SetStatusCode(404)
-			} else {
-				ctx.SetStatusCode(500)
-			}
-		} else {
-			ctx.SendFile(filepath)
+	fasthttp.CompressHandlerBrotliLevel(func(ctx *fasthttp.RequestCtx) {
+		fasthttpadaptor.NewFastHTTPHandler(er.Router)(ctx)
+		// If there is no URL in router then try serving from the dist
+		// folder.
+		if ctx.Response.StatusCode() == 404 {
+			ctx.Response.Reset()
+			er.distHandler(ctx)
 		}
-		return
-	}
+		// If there is no URL in router or in dist then send index.html
+		if ctx.Response.StatusCode() == 404 {
+			ctx.Response.Reset()
+			ctx.SendFile("web/dist/index.html")
+		}
+	}, fasthttp.CompressBrotliBestCompression, fasthttp.CompressBestCompression)(ctx)
 
-	if path == "/" {
-		body, _ := ioutil.ReadFile("web/spa.html")
-		ctx.Write(body)
-		ctx.SetContentType("text/html")
-		ctx.SetStatusCode(200)
-		// ctx.SendFile("web/spa.html")
-		return
-	}
-
-	fasthttpadaptor.NewFastHTTPHandler(er.Router)(ctx)
+	processingMS = time.Now().Sub(start).Milliseconds()
+	ctx.Response.Header.Set("X-Elapsed", strconv.FormatInt(processingMS, 10))
 }
 
 // Open starts the web worker

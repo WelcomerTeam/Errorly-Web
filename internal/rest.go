@@ -14,9 +14,6 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-const dictionaryPath = "web/pages.json"
-const dictionaryOutputPath = "web/dictionary.json"
-
 const sessionName = "session"
 const discordUsersMe = "https://discord.com/api/users/@me"
 const discordRefreshDuration = time.Hour
@@ -128,26 +125,29 @@ func ParseUserToken(token string) (uid int64, random []byte, valid bool) {
 }
 
 // AuthenticateSession verifies the session is valid
-func (er *Errorly) AuthenticateSession(session *sessions.Session) (auth bool, user *structs.User) {
+func (er *Errorly) AuthenticateSession(session *sessions.Session) (auth bool, user structs.User) {
 	token, ok := session.Values["token"].(string)
 	if !ok {
-		return false, nil
+		auth = false
+		return
 	}
 
 	uid, _, valid := ParseUserToken(token)
 	if !valid {
-		return false, nil
+		auth = false
+		return
 	}
 
-	user = &structs.User{}
-	err := er.Postgres.Model(user).Where("id = ?", uid).Select()
+	err := er.Postgres.Model(&user).Where("id = ?", uid).Select()
 	if err != nil {
 		er.Logger.Error().Err(err).Msg("Failed to fetch user")
-		return false, nil
+		auth = false
+		return
 	}
 
 	if user.Token != token {
-		return false, nil
+		auth = false
+		return
 	}
 
 	return true, user
@@ -157,12 +157,28 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	router = NewMethodRouter()
 
 	router.HandleFunc("/login", LoginHandler(er), "GET")
-	router.HandleFunc("/oauth2/callback", OAuthCallbackHandler(er), "GET")
 	router.HandleFunc("/logout", LogoutHandler(er), "GET")
+	router.HandleFunc("/oauth2/callback", OAuthCallbackHandler(er), "GET")
 
 	router.HandleFunc("/api/me", APIMeHandler(er), "GET")
-	router.HandleFunc("/api/dictionary", APIDictionaryHandler(er), "GET")
 
+	router.HandleFunc("/api/projects", APIProjectCreateHandler(er), "POST")
+	// POST  /api/project/{project_id}/execute - Execute task (star, assign, unassign etc.)
+	// PATCH /api/project/{project_id} - Update project settings
+	router.HandleFunc("/api/project/{project_id}", APIProjectHandler(er), "GET")          // Project information and page 1 of issues
+	router.HandleFunc("/api/project/{project_id}/lazy", APIProjectLazyHandler(er), "GET") // Returns partial user objects from provided user arguments
+	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")
+
+	// POST  /api/project/{project_id}/issues - Create issue
+	// PATCH /api/projects/{project_id}/issue/{issue_id} - Update issue
+
+	// GET  /api/project/{project_id}/issue/{issue_id}/comments - List issue comments
+	// POST /api/project/{project_id}/issue/{issue_id}/comments - Create issue comment
+
+	// POST /api/project/{project_id}/webhook/{webhook_id}/test - Tests webhook
+	// POST /api/project/{project_id}/integration/{integration_id}/regenerate - Creates a new integration token
+
+	// BOILERPLATE:
 	// router.HandleFunc("", func(w http.ResponseWriter, r *http.Request) {
 	//     session, _ := er.Store.Get(r, sessionName)
 	//     defer session.Save(r, w)
