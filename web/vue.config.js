@@ -62,13 +62,6 @@ module.exports = {
         changeOrigin: true,
         withCredentials: true,
         secure: false
-      },
-      "/post": {
-        target: "https://postman-echo.com",
-        ws: true,
-        changeOrigin: true,
-        withCredentials: true,
-        secure: false
       }
     }
   }

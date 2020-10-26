@@ -15,7 +15,5 @@
 # vendor/
 errorly.yaml
 
-web/static/*.fasthttp.gz
 logs
-internal/spec_old.go.old
-web/dictionary.json
+errorly
