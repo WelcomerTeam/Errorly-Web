@@ -694,6 +694,203 @@ func APIProjectLazyHandler(er *Errorly) http.HandlerFunc {
 	}
 }
 
+// APIProjectExecutorHandler handles executing jobs
+func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Check if an action has been passed
+		action, err := structs.ParseActionType(r.FormValue("action"))
+		if err != nil {
+			passResponse(rw, "Action argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		println("issues:", r.FormValue("issues"))
+		_issueIDs, err := qs.Unmarshal(r.FormValue("issues"))
+		if err != nil {
+			passResponse(rw, "IssueIDs argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		issueIDs := make([]int64, 0, len(_issueIDs))
+		for _, _id := range _issueIDs {
+			if _id, ok := _id.(string); ok {
+				id, err := strconv.ParseInt(_id, 10, 64)
+				if err == nil {
+					issueIDs = append(issueIDs, id)
+				}
+			}
+		}
+
+		// Star
+		var starring bool
+		// Assign
+		var assigning bool
+		var assigneeID int64
+		// LockComments
+		var locking bool
+		// MarkStatus
+		var markType structs.EntryType
+
+		switch action {
+		case structs.ActionStar:
+			starring, err = strconv.ParseBool(r.FormValue("starring"))
+			if err != nil {
+				passResponse(rw, "Starring argument is not valid", false, http.StatusBadRequest)
+				return
+			}
+		case structs.ActionAssign:
+			assigning, err = strconv.ParseBool(r.FormValue("assigning"))
+			if err != nil {
+				passResponse(rw, "Assigning argument is not valid", false, http.StatusBadRequest)
+				return
+			}
+			assigneeID, err = strconv.ParseInt(r.FormValue("assignee_id"), 10, 64)
+			if err != nil {
+				passResponse(rw, "AssigneeID argument is not valid", false, http.StatusBadRequest)
+				return
+			}
+		case structs.ActionLockComments:
+			locking, err = strconv.ParseBool(r.FormValue("locking"))
+			if err != nil {
+				passResponse(rw, "Locking argument is not valid", false, http.StatusBadRequest)
+				return
+			}
+		case structs.ActionMarkStatus:
+			markType, err = structs.ParseEntryType(r.FormValue("mark_type"))
+			if err != nil {
+				passResponse(rw, "MarkType argument is not valid", false, http.StatusBadRequest)
+				return
+			}
+		default:
+			passResponse(rw, "Action argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be signed in to do this", false, http.StatusForbidden)
+			return
+		}
+
+		// Retrieve project and user permissions
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+		}
+
+		unavailable := make([]int64, 0)
+		issues := make([]structs.IssueEntry, 0)
+
+		now := time.Now().UTC()
+
+		for _, issueID := range issueIDs {
+			// Fetch the request
+			issue := structs.IssueEntry{}
+			err = er.Postgres.Model(&issue).Where("project_id = ?", project.ID).Where("id = ?", issueID).Select()
+			if err != nil {
+				if err == pg.ErrNoRows {
+					// Invalid issue ID
+					unavailable = append(unavailable, issueID)
+					continue
+					// passResponse(rw, "Could not find this issue", false, http.StatusBadRequest)
+					// return
+				}
+
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
+
+			// Handle action passed
+			switch action {
+			case structs.ActionStar:
+				issue.Starred = starring
+			case structs.ActionAssign:
+				if assigning {
+					issue.AssigneeID = assigneeID
+				} else {
+					if issue.AssigneeID == assigneeID {
+						issue.AssigneeID = 0
+					}
+				}
+			case structs.ActionLockComments:
+				issue.CommentsLocked = locking
+
+				// Create comment
+				comment := structs.Comment{
+					ID:             er.IDGen.GenerateID(),
+					IssueID:        issue.ID,
+					CreatedAt:      now,
+					CreatedByID:    user.ID,
+					Type:           structs.CommentsLocked,
+					CommentsOpened: locking,
+				}
+				_, err = er.Postgres.Model(&comment).Insert()
+				if err != nil {
+					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+					return
+				}
+			case structs.ActionMarkStatus:
+				issue.Type = markType
+
+				// Create comment
+				comment := structs.Comment{
+					ID:          er.IDGen.GenerateID(),
+					IssueID:     issue.ID,
+					CreatedAt:   now,
+					CreatedByID: user.ID,
+					Type:        structs.IssueMarked,
+					IssueMarked: markType,
+				}
+				_, err = er.Postgres.Model(&comment).Insert()
+				if err != nil {
+					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+					return
+				}
+			}
+
+			issue.LastModified = now
+			_, err = er.Postgres.Model(&issue).WherePK().Update()
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
+
+			issues = append(issues, issue)
+		}
+
+		passResponse(rw, structs.APIProjectExecutor{
+			Issues:      issues,
+			Unavailable: unavailable,
+		}, true, http.StatusOK)
+	}
+}
+
 // APIProjectIssueHandler returns paginated results
 func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
@@ -707,7 +904,7 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 		// Get query from search
 		query := urlQuery.Get("q")
 		if query == "" {
-			query = "sort:created_by-asc"
+			query = "sort:created_by-asc sort:starred-desc"
 		}
 
 		// We should get a limit argument here but at the moment
@@ -729,55 +926,13 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 			return
 		}
 
-		// Retrieve project_id from /project/{project_id}
-		_projectID, ok := vars["project_id"]
-		if !ok {
-			passResponse(rw, "Project ID is missing", false, http.StatusBadRequest)
-			return
-		}
-
-		// Check projectID is a valid number
-		projectID, err := strconv.ParseInt(_projectID, 10, 64)
-		if err != nil {
-			passResponse(rw, "Project ID argument is not valid", false, http.StatusBadRequest)
-			return
-		}
-
-		// Now we have a possibly valid ID we will first get the project
-		project := &structs.Project{}
-		err = er.Postgres.Model(project).Where("project.id = ?", projectID).Relation("Webhooks").Select()
-		if err != nil {
-			if err == pg.ErrNoRows {
-				passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
-				return
-			}
-
-			er.Logger.Error().Err(err).Msg("Failed to retrieve project")
-			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
-			return
-		}
-
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
 
-		// If the project is private, check if the user is able to view.
-		var viewable bool
-		if project.Settings.Private {
-			viewable = false
-			if auth {
-				if user.ID == project.CreatedByID {
-					viewable = true
-				} else {
-					for _, uid := range project.Settings.ContributorIDs {
-						if uid == user.ID {
-							viewable = true
-							break
-						}
-					}
-				}
-			}
-		} else {
-			viewable = true
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
 		}
 
 		if !viewable {

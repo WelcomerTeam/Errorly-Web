@@ -162,27 +162,37 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 
 	router.HandleFunc("/api/me", APIMeHandler(er), "GET")
 
-	router.HandleFunc("/api/projects", APIProjectCreateHandler(er), "POST")
-	// POST  /api/project/{project_id}/execute - Execute task (star, assign, unassign etc.)
+	// Projects:
+	router.HandleFunc("/api/projects", APIProjectCreateHandler(er), "POST")                       // Creates a project
+	router.HandleFunc("/api/project/{project_id}", APIProjectHandler(er), "GET")                  // Project information and page 1 of issues
+	router.HandleFunc("/api/project/{project_id}/lazy", APIProjectLazyHandler(er), "GET")         // Returns partial user objects from provided user arguments
+	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")      // Returns issued based off of a query
+	router.HandleFunc("/api/project/{project_id}/execute", APIProjectExecutorHandler(er), "POST") // Execute task (star, assign, unassign etc.)
 	// PATCH /api/project/{project_id} - Update project settings
-	router.HandleFunc("/api/project/{project_id}", APIProjectHandler(er), "GET")          // Project information and page 1 of issues
-	router.HandleFunc("/api/project/{project_id}/lazy", APIProjectLazyHandler(er), "GET") // Returns partial user objects from provided user arguments
-	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")
+	// DELETE /api/project/{project_id} - Deletes the project
 
-	// POST  /api/project/{project_id}/issues - Create issue
+	// Issues:
+	// POST  /api/project/{project_id}/issue - Create issue
 	// PATCH /api/projects/{project_id}/issue/{issue_id} - Update issue
+	// DELETE /api/projects/{project_id}/issue/{issue_id} - Delete issue
 
-	// GET  /api/project/{project_id}/issue/{issue_id}/comments - List issue comments
+	// Comments:
 	// POST /api/project/{project_id}/issue/{issue_id}/comments - Create issue comment
+	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
+	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
+	// GET  /api/project/{project_id}/issue/{issue_id}/comments - List issue comments
 
+	// Webhooks:
+	// POST /api/project/{project_id}/webhook - Creates a webhook
+	// PATCH /api/project/{project_id}/webhook/{webhook_id} - Updates a webhook
+	// DELETE /api/project/{project_id}/webhook/{webhook_id} - Deletes a webhook
 	// POST /api/project/{project_id}/webhook/{webhook_id}/test - Tests webhook
-	// POST /api/project/{project_id}/integration/{integration_id}/regenerate - Creates a new integration token
 
-	// BOILERPLATE:
-	// router.HandleFunc("", func(w http.ResponseWriter, r *http.Request) {
-	//     session, _ := er.Store.Get(r, sessionName)
-	//     defer session.Save(r, w)
-	// }, "GET")
+	// Integrations:
+	// POST /api/project/{project_id}/integration - Creates an integration
+	// PATCH /api/project/{project_id}/integration - Updates an integration
+	// DELETE /api/project/{project_id}/integration - Deletes an integration
+	// POST /api/project/{project_id}/integration/{integration_id}/regenerate - Creates a new integration token
 
 	return
 }

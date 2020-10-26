@@ -184,7 +184,7 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 		log.Msgf("%s %s %s %d %d %dms",
 			ctx.RemoteAddr(),
 			ctx.Request.Header.Method(),
-			ctx.Request.URI().Path(),
+			ctx.Request.URI().PathOriginal(),
 			statusCode,
 			len(ctx.Response.Body()),
 			processingMS,

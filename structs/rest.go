@@ -1,5 +1,39 @@
 package structs
 
+import "golang.org/x/xerrors"
+
+// ActionType signifies the action type of a task
+type ActionType uint8
+
+const (
+	// ActionStar signifies the issue will be starred/un-starred
+	ActionStar ActionType = iota
+	// ActionAssign signifies that someone is being assigned/unassigned
+	ActionAssign
+	// ActionLockComments signifies the comments for an issue is about
+	// to be locked/unlocked.
+	ActionLockComments
+	// ActionMarkStatus signifies the status of an issue is changing.
+	ActionMarkStatus
+)
+
+// ParseActionType converts a response string into a ActionType value.
+// Returns an error if the input string does not match known values.
+func ParseActionType(actionTypeStr string) (ActionType, error) {
+
+	switch actionTypeStr {
+	case "star":
+		return ActionStar, nil
+	case "assign":
+		return ActionAssign, nil
+	case "lock_comments":
+		return ActionLockComments, nil
+	case "mark_status":
+		return ActionMarkStatus, nil
+	}
+	return ActionStar, xerrors.Errorf("Unknown EntryType String: '%s', defaulting to EntryActive", actionTypeStr)
+}
+
 // BaseResponse is the structure of all REST requests
 type BaseResponse struct {
 	Success bool        `json:"success"`
@@ -46,6 +80,12 @@ type APIProject struct {
 type APIProjectLazy struct {
 	Users map[int64]PartialUser `json:"users"`
 	IDs   []int64               `json:"ids"`
+}
+
+// APIProjectExecutor is the structure of the POST /api/project/{id}/execute endpoint
+type APIProjectExecutor struct {
+	Issues      []IssueEntry `json:"issues"`
+	Unavailable []int64      `json:"unavailable"`
 }
 
 // APIProjectIssues is the structure of the GET /api/project/{id}/issues endpoint

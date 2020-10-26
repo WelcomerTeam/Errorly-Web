@@ -168,7 +168,7 @@ export default {
       total_issues: 0,
       page: this.$route.query.page || 0,
       issue_query: this.$route.query.q || "",
-      issues: [],
+      issues: {},
       contributors: {},
       contributors_loaded: false,
 
@@ -207,8 +207,40 @@ export default {
     next();
   },
   methods: {
+    selectAllIssues(toggle) {
+      for (var issueID in this.issues) {
+        var issue = this.issues[issueID];
+        issue.checked = toggle;
+        this.$set(this.issues, issueID, issue);
+      };
+    },
     starIssue(id, star) {
-      console.log(id, star);
+      this.issues[id].starred = star;
+      axios
+        .post("/api/project/" + this.$route.params.id + "/execute", qs.stringify({
+          "action": "star",
+          "issues": qs.stringify([id]),
+          "starring": star,
+        }), {
+          headers: {
+            "content-type": "application/x-www-form-urlencoded;charset=utf-8"
+          }
+        })
+        .then(result => {
+          var data = result.data;
+          if (data.success) {
+            data.data.issues.forEach(issue => {
+              this.$set(this.issues, issue.id, issue);
+            })
+          }
+        })
+        .catch(error => {
+          if (error.response?.data) {
+            this.issue_error = error.response.data.error || error.response.data;
+          } else {
+            this.issue_error = error.toString();
+          }
+        })
     },
     fetchIssues() {
       var query = {
@@ -231,7 +263,7 @@ export default {
     },
     loadIssues(query) {
       this.issues_loading = true;
-      this.issues = [];
+      this.issues = {};
       this.issue_error = undefined;
       axios
         .get("/api/project/" + this.$route.params.id + "/issues", {
@@ -243,7 +275,7 @@ export default {
             var userQuery = [];
             this.total_issues = data.data.total_issues;
             this.page = data.data.page;
-            this.issues = data.data.issues.map(issue => {
+            data.data.issues.forEach(issue => {
               issue.checked = false;
               if (
                 issue.assignee_id != 0 &&
@@ -259,7 +291,7 @@ export default {
               ) {
                 userQuery.push(issue.created_by_id);
               }
-              return issue;
+              this.$set(this.issues, issue.id, issue);
             });
             if (userQuery.length > 0) {
               // fetch users

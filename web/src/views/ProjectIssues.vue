@@ -97,6 +97,7 @@
                 value=""
                 id="flexCheckDefault"
                 aria-label="Select all issue"
+                @click="vm => { $parent.selectAllIssues(vm.target.checked); }"
               />
             </th>
             <th colspan="6" scope="col" class="settings col-6 align-middle">
@@ -503,7 +504,7 @@ export default {
   },
   beforeRouteEnter(to, from, next) {
     next((vm) => {
-      if (vm.$parent.issues.length == 0) {
+      if (Object.keys(vm.$parent.issues).length == 0) {
         // vm.$parent.fetchIssues();
         vm.$parent.loadIssues({
           page: vm.$parent.page,

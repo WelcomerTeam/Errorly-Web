@@ -21,6 +21,10 @@ module.exports = {
       display: "standalone",
       orientation: "any",
       prefer_related_applications: false
+    },
+    workboxOptions: {
+      skipWaiting: true,
+      clientsClaim: true,
     }
   },
   configureWebpack: {
