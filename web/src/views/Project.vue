@@ -203,6 +203,17 @@ export default {
     var projectID = to.params?.id;
     if (from.params?.id != projectID && projectID != undefined) {
       getProject(to.params.id, (err, project) => {
+        // Reset Project State
+        this.total_issues = 0;
+        this.page = this.$route.query.page || 0;
+        this.issue_query = this.$route.query.q || "";
+        this.issues = {};
+        // preserve the contributors cache,
+        // we still still keep loaded false in the event there are members that need to be cached which regardless will be set to true in the future by loadIssues
+        this.contributors_loaded = false;
+        this.executing = false;
+        this.issue_error = undefined;
+        this.issues_loading = true;
         this.setData(err, project);
       });
     }
