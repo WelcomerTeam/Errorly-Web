@@ -172,6 +172,8 @@ export default {
       contributors: {},
       contributors_loaded: false,
 
+      executing: false,
+
       issue_error: undefined,
       issues_loading: true,
 
@@ -214,6 +216,38 @@ export default {
         this.$set(this.issues, issueID, issue);
       };
     },
+    getCheckedIssues() {
+      return Object.values(this.issues).filter(issue => { return issue.checked }).map(issue => { return issue.id })
+    },
+    executeTask(query) {
+      this.executing = true;
+      this.issue_error = undefined;
+      axios
+        .post("/api/project/" + this.$route.params.id + "/execute", qs.stringify(query), {
+          headers: {
+            "content-type": "application/x-www-form-urlencoded;charset=utf-8"
+          }
+        })
+        .then(result => {
+          var data = result.data;
+          if (data.success) {
+            data.data.issues.forEach(issue => {
+              issue["checked"] = this.issues[issue.id] ? this.issues[issue.id]["checked"] : false; 
+              this.$set(this.issues, issue.id, issue);
+            })
+          }
+        })
+        .catch(error => {
+          if (error.response?.data) {
+            this.issue_error = error.response.data.error || error.response.data;
+          } else {
+            this.issue_error = error.toString();
+          }
+        })
+        .finally(() => {
+          this.executing = false;
+        })
+      },
     starIssue(id, star) {
       this.issues[id].starred = star;
       axios
@@ -230,6 +264,7 @@ export default {
           var data = result.data;
           if (data.success) {
             data.data.issues.forEach(issue => {
+              issue["checked"] = this.issues[issue.id] ? this.issues[issue.id]["checked"] : false; 
               this.$set(this.issues, issue.id, issue);
             })
           }

@@ -81,7 +81,7 @@
         </p>
         <kbd>{{ $parent.issue_error }}</kbd>
       </div>
-      <table v-else class="table table-borderless table-hover card d-table">
+      <table class="table table-borderless table-hover card d-table">
         <thead class="card-header">
           <tr class="d-table-row">
             <th class="p-0 align-middle"></th>
@@ -117,6 +117,36 @@
                   {{ text[this.marked] }}
                 </button>
                 <ul class="dropdown-menu">
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      v-on:click.prevent="marked = 'none'"
+                    >
+                      <svg-icon type="mdi" :height="16" :path="mdiDotsHorizontal" />
+                      Select Action</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      v-on:click.prevent="marked = 'assign'"
+                    >
+                      <svg-icon type="mdi" :height="16" :path="mdiAccountPlus" />
+                      Assign user</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      v-on:click.prevent="marked = 'deassign'"
+                    >
+                      <svg-icon type="mdi" :height="16" :path="mdiAccountRemove" />
+                      Deassign user</a
+                    >
+                  </li>
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
                   <li>
                     <a
                       class="dropdown-item"
@@ -180,30 +210,7 @@
                   </li>
                 </ul>
               </div>
-              <div class="assign-select">
-                <input
-                  type="radio"
-                  class="btn-check"
-                  name="options"
-                  id="option1"
-                  autocomplete="off"
-                  checked
-                />
-                <label class="btn btn-outline-secondary btn-sm" for="option1"
-                  >Assign</label
-                >
-                <input
-                  type="radio"
-                  class="btn-check"
-                  name="options"
-                  id="option2"
-                  autocomplete="off"
-                />
-                <label class="btn btn-outline-secondary btn-sm" for="option2"
-                  >Unassign</label
-                >
-              </div>
-              <div class="btn-group dropright">
+              <div class="btn-group dropright" v-if="marked == 'assign' || marked == 'deassign'">
                 <button
                   class="btn btn-secondary btn-sm dropdown-toggle"
                   type="button"
@@ -211,14 +218,14 @@
                   aria-expanded="false"
                   aria-label="Select user to assign/deassign"
                 >
-                  {{ $parent.getUsername(this.assigned) || "Nothing" }}
+                  {{ $parent.getUsername(this.assigned) || "Nobody" }}
                 </button>
                 <ul class="dropdown-menu">
                   <li>
                     <a
                       class="dropdown-item user-select"
                       v-on:click.prevent="assigned = undefined"
-                      >Nothing</a
+                      >Nobody</a
                     >
                   </li>
                   <li>
@@ -234,6 +241,7 @@
                     <a
                       class="dropdown-item user-select"
                       v-on:click.prevent="assigned = user.id"
+                      v-if="!user.integration"
                     >
                       <img
                         v-if="user.avatar"
@@ -250,10 +258,15 @@
               <button
                 class="btn btn-outline-secondary btn-sm"
                 aria-label="Execute actions"
+                @click="execute()"
+                :disabled="(marked == 'none') || ((marked == 'assign' || marked == 'deassign') && !assigned) || $parent.getCheckedIssues().length == 0"
               >
-                <svg-icon
+                <div v-if="$parent.executing" style="width:.6rem;height:.6rem;vertical-align:sub;" class="spinner-border" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <svg-icon v-else
                   type="mdi"
-                  style="width:1rem;height:1rem;vertical-align: sub;"
+                  style="width:1rem;height:1rem;vertical-align:sub;"
                   :path="mdiPlay"
                 />
               </button>
@@ -331,7 +344,7 @@
                   >
                   {{ $parent.getUsername(issue.created_by_id) || "ghost" }}
                 </span>
-                <svg-icon type="mdi" :height="20" :path="mdiMessageText" />
+                <svg-icon type="mdi" :height="20" :path="issue.comments_locked ? mdiMessageTextLock : mdiMessageText" />
                 <span>{{ issue.comment_count }}</span>
                 <svg-icon
                   type="mdi"
@@ -406,6 +419,7 @@
 </template>
 
 <script>
+import qs from "qs";
 import SvgIcon from "@jamescoyle/vue-icon";
 import {
   mdiTray,
@@ -424,6 +438,10 @@ import {
   mdiAlertCircle,
   mdiMagnify,
   mdiCloseCircleOutline,
+  mdiAccountPlus,
+  mdiAccountRemove,
+  mdiDotsHorizontal,
+  mdiMessageTextLock
 } from "@mdi/js";
 
 export default {
@@ -433,10 +451,13 @@ export default {
   name: "ProjectIssues",
   data() {
     return {
-      marked: "resolved",
+      marked: "none",
       assigned: undefined,
       assigneeFilter: "",
       icons: {
+        none: mdiDotsHorizontal,
+        assign: mdiAccountPlus,
+        deassign: mdiAccountRemove,
         resolved: mdiTray,
         active: mdiTrayFull,
         open: mdiTrayAlert,
@@ -476,6 +497,9 @@ export default {
       },
 
       text: {
+        none: "Select Action",
+        assign: "Assign user",
+        deassign: "Deassign user",
         resolved: "Mark resolved",
         active: "Mark active",
         open: "Mark open",
@@ -484,6 +508,8 @@ export default {
         unlock: "Unlock comments",
       },
 
+      mdiAccountPlus: mdiAccountPlus,
+      mdiAccountRemove: mdiAccountRemove,
       mdiTray: mdiTray,
       mdiTrayFull: mdiTrayFull,
       mdiTrayAlert: mdiTrayAlert,
@@ -500,6 +526,8 @@ export default {
       mdiAlertCircle: mdiAlertCircle,
       mdiMagnify: mdiMagnify,
       mdiCloseCircleOutline: mdiCloseCircleOutline,
+      mdiDotsHorizontal: mdiDotsHorizontal,
+      mdiMessageTextLock: mdiMessageTextLock
     };
   },
   beforeRouteEnter(to, from, next) {
@@ -514,6 +542,49 @@ export default {
     });
   },
   methods: {
+    execute() {
+      var query = {
+        issues: qs.stringify(this.$parent.getCheckedIssues()),
+      }
+
+      if (this.marked == "assign") {
+        query["action"] = "assign";
+        query["assigning"] = true;
+        query["assignee_id"] = this.assigned;
+      }
+      if (this.marked == "deassign") {
+        query["action"] = "assign";
+        query["assigning"] = false;
+        query["assignee_id"] = this.assigned;        
+      }
+      if (this.marked == "resolved") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryResolved";
+      }
+      if (this.marked == "active") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryActive";        
+      }
+      if (this.marked == "open") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryOpen";
+      }
+      if (this.marked == "invalid") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryInvalid";
+      }
+      if (this.marked == "lock") {
+        query["action"] = "lock_comments"
+        query["locking"] = true
+      }
+      if (this.marked == "unlock") {
+        query["action"] = "lock_comments"
+        query["locking"] = false
+      }
+
+      console.log(query);
+      this.$parent.executeTask(query);
+    },
     filterAssignee() {
       var contributors = Object.values(this.$parent.contributors);
       if (this.projectFilter == "") {
