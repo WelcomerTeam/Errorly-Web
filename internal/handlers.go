@@ -973,6 +973,10 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		issues, totalissues, err := fetchProjectIssues(er, project.ID, _pageLimit, page, query, user.ID)
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
 
 		passResponse(rw, structs.APIProjectIssues{
 			Page:        page,
