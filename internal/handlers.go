@@ -12,6 +12,7 @@ import (
 	"github.com/TheRockettek/Errorly-Web/structs"
 	"github.com/derekstavis/go-qs"
 	"github.com/go-pg/pg/v10"
+	"github.com/go-pg/pg/v10/orm"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-uuid"
 	"github.com/lithammer/fuzzysearch/fuzzy"
@@ -180,7 +181,10 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 						initialQuery = initialQuery.Where("assignee_id = ?", userID)
 					}
 				case "no":
-					initialQuery = initialQuery.Where("assignee_id = ?", 0)
+					initialQuery = initialQuery.WhereGroup(func(q *orm.Query) (*orm.Query, error) {
+						q = q.WhereOr("assignee_id = ?", 0).WhereOr("assignee_id IS NULL")
+						return q, nil
+					})
 				default:
 					println("Assignee is ", thumb)
 					id, err := strconv.Atoi(thumb)
