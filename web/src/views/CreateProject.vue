@@ -1,13 +1,13 @@
 <template>
   <div class="container mt-5">
-    <div
-      class="border border-danger text-dark rounded-sm p-3 my-4"
-      role="alert"
-      v-if="this.error"
+    <a
+      class="text-dark mb-2 text-decoration-none h6 d-flex"
+      @click="$router.go(-1)"
+      href="#"
     >
-      <h5 class="font-weight-bold">Error:</h5>
-      {{ this.error }}
-    </div>
+      <svg-icon class="mr-3" type="mdi" :path="mdiChevronLeft" />
+      Back to projects
+    </a>
 
     <div class="pb-4 mb-4 border-bottom border-muted">
       <h3 class="pb-1">Create Project</h3>
@@ -75,6 +75,15 @@
     >
       Create Project
     </button>
+
+    <div
+      class="border border-danger text-dark rounded-sm p-3 my-4"
+      role="alert"
+      v-if="this.error"
+    >
+      <h5 class="font-weight-bold">Error:</h5>
+      {{ this.error }}
+    </div>
   </div>
 </template>
 
@@ -82,10 +91,13 @@
 import axios from "axios";
 import qs from "qs";
 import FormInput from "@/components/FormInput.vue";
+import SvgIcon from "@jamescoyle/vue-icon";
+import { mdiChevronLeft } from "@mdi/js";
 
 export default {
   components: {
     FormInput,
+    SvgIcon,
   },
   name: "CreateProject",
   data: function () {
@@ -99,11 +111,12 @@ export default {
         private: false,
         limited: false,
       },
+      mdiChevronLeft: mdiChevronLeft,
     };
   },
   methods: {
     validRequest() {
-      if (this.project.display_name.length < 3) {
+      if (this.project.display_name.trim().length < 3) {
         return false;
       }
 
@@ -140,8 +153,11 @@ export default {
           }
         })
         .catch((error) => {
-          var data = error.response.data;
-          this.error = data.error;
+          if (error.response?.data) {
+            this.error = error.response.data.error || error.response.data;
+          } else {
+            this.error = error.toString();
+          }
         });
     },
   },

@@ -622,6 +622,78 @@ func isContributor(project structs.Project, id int64) bool {
 	return false
 }
 
+// APIProjectContributorsHandler returns a list of partial users from all contributor ids
+func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		// Retrieve project and user permissions
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		contributorIDs := make([]int64, 0, len(project.Settings.ContributorIDs))
+		contributors := make(map[int64]structs.PartialUser)
+
+		for _, contributorID := range project.Settings.ContributorIDs {
+			_, ok := contributors[contributorID]
+			if ok {
+				// Do not fetch the user if we already have fetched them
+				continue
+			}
+
+			if isContributor(project, contributorID) {
+				contributor := structs.User{}
+				err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select()
+				if err != nil {
+					er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
+				} else {
+					contributors[contributor.ID] = structs.PartialUser{
+						ID:          contributor.ID,
+						Name:        contributor.Name,
+						Integration: contributor.Integration,
+					}
+				}
+			}
+		}
+
+		// Add owner to contributors if not in it already
+		if _, ok := contributors[project.CreatedByID]; !ok {
+			contributor := structs.User{}
+			err := er.Postgres.Model(&contributor).Where("id = ?", project.CreatedByID).Select()
+			if err != nil {
+				er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
+			} else {
+				contributors[contributor.ID] = structs.PartialUser{
+					ID:          contributor.ID,
+					Name:        contributor.Name,
+					Integration: contributor.Integration,
+				}
+			}
+		}
+
+		passResponse(rw, structs.APIProjectLazy{
+			Users: contributors,
+			IDs:   contributorIDs,
+		}, true, http.StatusOK)
+	}
+}
+
 // APIProjectLazyHandler returns a list of partial users based on the passed user ids query
 func APIProjectLazyHandler(er *Errorly) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {

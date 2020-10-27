@@ -66,7 +66,7 @@ type PartialProject struct {
 type PartialUser struct {
 	ID          int64  `json:"id"`
 	Name        string `json:"name"`
-	Avatar      string `json:"avatar"`
+	Avatar      string `json:"avatar,omitempty"`
 	Integration bool   `json:"integration"`
 }
 
@@ -76,10 +76,10 @@ type APIProject struct {
 	Contributors map[int64]PartialUser `json:"contributors"`
 }
 
-// APIProjectLazy is the structure of the GET /api/project/{id}/lazy endpoint
+// APIProjectLazy is the structure of the GET /api/project/{id}/lazy endpoint and /api/project/{id}/contributors
 type APIProjectLazy struct {
 	Users map[int64]PartialUser `json:"users"`
-	IDs   []int64               `json:"ids"`
+	IDs   []int64               `json:"ids,omitempty"`
 }
 
 // APIProjectExecutor is the structure of the POST /api/project/{id}/execute endpoint

@@ -11,7 +11,9 @@
     <label class="form-check-label" :for="id">{{ label }}</label>
   </div>
   <div v-else-if="type == 'text'">
-    <label :for="id" class="col-sm-12 form-label">{{ label }}</label>
+    <label :for="id" v-if="label" class="col-sm-12 form-label">{{
+      label
+    }}</label>
     <input
       type="text"
       class="form-control"
@@ -22,8 +24,25 @@
       :placeholder="placeholder"
     />
   </div>
+  <div v-else-if="type == 'area'">
+    <label :for="id" v-if="label" class="col-sm-12 form-label">{{
+      label
+    }}</label>
+    <textarea
+      type="text"
+      class="form-control"
+      :id="id"
+      :value="value"
+      v-on:change="updateValue($event.target.value)"
+      style="height: 10rem"
+      :disabled="disabled"
+      :placeholder="placeholder"
+    />
+  </div>
   <div v-else-if="type == 'list'">
-    <label :for="id" class="col-sm-12 form-label">{{ label }}</label>
+    <label :for="id" v-if="label" class="col-sm-12 form-label">{{
+      label
+    }}</label>
     <input
       type="text"
       class="form-control"
@@ -37,7 +56,9 @@
     />
   </div>
   <div v-else-if="type == 'number'">
-    <label :for="id" class="col-sm-12 form-label">{{ label }}</label>
+    <label :for="id" v-if="label" class="col-sm-12 form-label">{{
+      label
+    }}</label>
     <input
       type="number"
       class="form-control"
@@ -49,7 +70,9 @@
     />
   </div>
   <div v-else-if="type == 'password'">
-    <label :for="id" class="col-sm-12 form-label">{{ label }}</label>
+    <label :for="id" v-if="label" class="col-sm-12 form-label">{{
+      label
+    }}</label>
     <div class="input-group">
       <input
         type="password"
@@ -71,7 +94,9 @@
     </div>
   </div>
   <div v-else-if="type == 'select'">
-    <label :for="id" class="col-sm-12 form-label">{{ label }}</label>
+    <label :for="id" v-if="label" class="col-sm-12 form-label">{{
+      label
+    }}</label>
     <select
       class="form-select"
       :id="id"
@@ -81,7 +106,8 @@
       <option
         v-for="(item, index) in values"
         v-bind:key="index"
-        selected="item == value"
+        :value="index"
+        :selected="item == value"
       >
         {{ item }}
       </option>

@@ -2,7 +2,7 @@
   <div>
     <div class="d-flex mb-3">
       <div
-        class="input-group input-group-sm border border-secondary rounded"
+        class="input-group input-group-sm border border-secondary rounded d-flex flex-fill mr-3"
         style="width: fit-content"
       >
         <button
@@ -65,6 +65,9 @@
           />
         </button>
       </div>
+      <router-link :to="'/project/' + this.$route.params.id + '/issue/create'">
+        <button class="btn btn-success" type="button">New Issue</button>
+      </router-link>
     </div>
     <div class="table-responsive">
       <div class="text-center my-5" v-if="$parent.issue_error">
@@ -328,7 +331,7 @@
 
             <th class="ticket-status" colspan="6">
               <button
-                class="btn"
+                class="btn text-dark"
                 style="padding: 0"
                 @click="$parent.starIssue(issue.id, !issue.starred)"
                 aria-label="Star issue"
@@ -336,13 +339,21 @@
                 <svg-icon
                   type="mdi"
                   :path="issue.starred ? mdiStar : mdiStarOutline"
-                  style="color: var(--bs-blue)"
                 />
               </button>
-              <span class="text-primary">{{ issue.error }}</span>
-              <span class="text-secondary">{{ issue.function }}</span>
-              <span class="text-secondary">{{ issue.checkpoint }}</span>
-              <span>{{ issue.description }}</span>
+              <router-link
+                class="issue-error text-decoration-none"
+                :to="'/project/' + $route.params.id + '/issue/' + issue.id"
+              >
+                {{ issue.error }}
+              </router-link>
+              <span class="issue-function text-secondary">{{
+                issue.function
+              }}</span>
+              <span class="issue-checkpoint text-secondary">{{
+                issue.checkpoint
+              }}</span>
+              <span class="issue-description">{{ issue.description }}</span>
               <div class="ticket-footer align-middle">
                 <!-- <span>Welcomer</span> -->
                 Last modified
@@ -649,19 +660,25 @@ export default {
 .ticket .ticket-status > * {
   vertical-align: middle;
 }
-.ticket .ticket-status > span:nth-of-type(1) {
+.ticket .ticket-status .issue-error {
   font-weight: normal;
   font-size: x-large;
+  color: black;
 }
-.ticket .ticket-status > span:nth-of-type(2) {
+.ticket .ticket-status .issue-error:hover {
+  color: var(--bs-primary);
+}
+
+.ticket .ticket-status .issue-function {
+  display: block;
+  font-weight: normal;
+  font-size: small;
+}
+.ticket .ticket-status .issue-checkpoint {
   display: block;
   font-weight: normal;
 }
-.ticket .ticket-status > span:nth-of-type(3) {
-  display: block;
-  font-weight: normal;
-}
-.ticket .ticket-status > span:nth-of-type(4) {
+.ticket .ticket-status .issue-description {
   font-weight: 500;
   font-size: larger;
 }
