@@ -904,7 +904,7 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 		// Get query from search
 		query := urlQuery.Get("q")
 		if query == "" {
-			query = "sort:created_by-asc sort:starred-desc"
+			query = "sort:created_by-asc sort:starred-asc"
 		}
 
 		// We should get a limit argument here but at the moment
