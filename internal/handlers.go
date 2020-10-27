@@ -856,7 +856,32 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 					return
 				}
 			case structs.ActionMarkStatus:
+				switch issue.Type {
+				case structs.EntryActive:
+					project.ActiveIssues--
+				case structs.EntryOpen:
+					project.OpenIssues--
+				case structs.EntryResolved:
+					project.ResolvedIssues--
+				}
+
 				issue.Type = markType
+
+				switch issue.Type {
+				case structs.EntryActive:
+					project.ActiveIssues++
+				case structs.EntryOpen:
+					project.OpenIssues++
+				case structs.EntryResolved:
+					project.ResolvedIssues++
+				}
+
+				// Update issues cache counter on project
+				_, err = er.Postgres.Model(&project).WherePK().Update()
+				if err != nil {
+					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+					return
+				}
 
 				// Create comment
 				comment := structs.Comment{
@@ -887,6 +912,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 		passResponse(rw, structs.APIProjectExecutor{
 			Issues:      issues,
 			Unavailable: unavailable,
+			Project:     project,
 		}, true, http.StatusOK)
 	}
 }

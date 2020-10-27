@@ -86,6 +86,7 @@ type APIProjectLazy struct {
 type APIProjectExecutor struct {
 	Issues      []IssueEntry `json:"issues"`
 	Unavailable []int64      `json:"unavailable"`
+	Project     Project      `json:"project"`
 }
 
 // APIProjectIssues is the structure of the GET /api/project/{id}/issues endpoint

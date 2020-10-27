@@ -258,6 +258,7 @@ export default {
                 : false;
               this.$set(this.issues, issue.id, issue);
             });
+            this.project = data.data.project;
           }
         })
         .catch((error) => {
