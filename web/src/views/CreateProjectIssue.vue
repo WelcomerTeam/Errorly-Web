@@ -74,6 +74,12 @@
       making
     </p>
 
+    <p class="text-muted">
+      When creating an issue, if it finds an issue with the same title and
+      function, it will increment the occurrences of the already made issue
+      instead of creating a new one.
+    </p>
+
     <button
       type="button"
       class="btn btn-success"

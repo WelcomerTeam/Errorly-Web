@@ -931,6 +931,8 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 					return
 				}
+				issue.CommentCount++
+
 			case structs.ActionMarkStatus:
 				switch issue.Type {
 				case structs.EntryActive:
@@ -973,6 +975,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 					return
 				}
+				issue.CommentCount++
 			}
 
 			issue.LastModified = now
@@ -1055,6 +1058,121 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 			TotalIssues: totalissues,
 			Issues:      issues,
 		}, true, http.StatusOK)
+	}
+}
+
+// APIProjectIssueCreateHandler creates a new issue or increments an already made issue
+func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be signed into create a project", false, http.StatusForbidden)
+			return
+		}
+
+		// Retrieve project and user permissions
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !elevated {
+			passResponse(rw, "You do not have permission to do this", false, http.StatusForbidden)
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		if project.Settings.Archived {
+			// If the project is Archived, new issues cannot be made
+			passResponse(rw, "This project is archived", false, http.StatusForbidden)
+			return
+		}
+
+		// Retrieve issue error
+		issueError := r.FormValue("error")
+		if issueError == "" {
+			passResponse(rw, "Error is missing", false, http.StatusBadRequest)
+			return
+		}
+
+		// Retrieve issue function
+		issueFunction := r.FormValue("function")
+		if issueFunction == "" {
+			passResponse(rw, "Function is missing", false, http.StatusBadRequest)
+			return
+		}
+
+		now := time.Now().UTC()
+		issue := structs.IssueEntry{}
+		newProject := false
+		err := er.Postgres.Model(&issue).Where("error = ?", issueError).Where("function = ?", issueFunction).Select()
+		if err != nil {
+			if err != pg.ErrNoRows {
+				// Unexpected error
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
+
+			newProject = true
+			issue = structs.IssueEntry{
+				ID:             er.IDGen.GenerateID(),
+				ProjectID:      project.ID,
+				Starred:        false,
+				Type:           structs.EntryOpen,
+				Occurrences:    1,
+				AssigneeID:     assigneeID, // todo
+				Error:          issueError,
+				Function:       issueFunction,
+				Checkpoint:     "", // todo
+				Description:    "", // todo
+				Traceback:      "", // todo
+				LastModified:   now,
+				CreatedAt:      now,
+				CreatedByID:    user.ID,
+				CommentCount:   0,
+				CommentsLocked: false, // todo
+			}
+			// no such error
+			// make error
+		} else {
+			// An error with this function and error already exists, increment it again
+			issue.Occurrences++
+			issue.LastModified = now
+			_, err = er.Postgres.Model(&issue).WherePK().Update()
+			if err != nil {
+				// Error updating query
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		println(issue.ID, newProject)
+
+		// projectName := r.PostFormValue("display_name")
+		// if len(projectName) < 3 {
+		// 	passResponse(rw, "Invalid name was passed", false, http.StatusBadRequest)
+		// 	return
+		// }
+
 	}
 }
 

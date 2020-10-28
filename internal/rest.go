@@ -173,6 +173,7 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// DELETE /api/project/{project_id} - Deletes the project
 
 	// Issues:
+	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueCreateHandler(er), "POST")
 	// POST  /api/project/{project_id}/issue - Create issue
 	// PATCH /api/projects/{project_id}/issue/{issue_id} - Update issue
 	// DELETE /api/projects/{project_id}/issue/{issue_id} - Delete issue
