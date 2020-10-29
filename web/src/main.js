@@ -1,6 +1,8 @@
 import axios from "axios";
 import router from "./router";
 import Vue from "vue";
+import JSONBig from "json-bigint";
+var jsonBig = JSONBig({ storeAsString: true });
 
 import App from "./App.vue";
 
@@ -31,7 +33,7 @@ new Vue({
   methods: {
     fetchMe() {
       axios
-        .get("/api/me")
+        .get("/api/me", { transformResponse: [(data) => jsonBig.parse(data)] })
         .then((result) => {
           var data = result.data;
           if (data.success) {

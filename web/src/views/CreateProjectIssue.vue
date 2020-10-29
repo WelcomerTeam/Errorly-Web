@@ -105,7 +105,9 @@ import axios from "axios";
 import qs from "qs";
 import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
+import JSONBig from "json-bigint";
 import { mdiChevronLeft } from "@mdi/js";
+var jsonBig = JSONBig({ storeAsString: true });
 
 export default {
   components: { FormInput, SvgIcon },
@@ -135,7 +137,9 @@ export default {
         0: "Nobody",
       };
       axios
-        .get("/api/project/" + this.$route.params.id + "/contributors")
+        .get("/api/project/" + this.$route.params.id + "/contributors", {
+          transformResponse: [(data) => jsonBig.parse(data)],
+        })
         .then((result) => {
           var data = result.data;
           if (data.success) {
@@ -169,6 +173,7 @@ export default {
           "/api/project/" + this.$route.params.id + "/issues",
           qs.stringify(issue),
           {
+            transformResponse: [(data) => jsonBig.parse(data)],
             headers: {
               "content-type": "application/x-www-form-urlencoded;charset=utf-8",
             },
@@ -178,7 +183,10 @@ export default {
           var data = result.data;
           if (data.success) {
             this.$router.push(
-              "/project/" + this.$route.params.id + "/issue/" + data.data.issue.id
+              "/project/" +
+                this.$route.params.id +
+                "/issue/" +
+                data.data.issue.id
             );
           } else {
             this.error = data.error;

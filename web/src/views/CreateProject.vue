@@ -92,7 +92,9 @@ import axios from "axios";
 import qs from "qs";
 import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
+import JSONBig from "json-bigint";
 import { mdiChevronLeft } from "@mdi/js";
+var jsonBig = JSONBig({ storeAsString: true });
 
 export default {
   components: {
@@ -138,6 +140,7 @@ export default {
     createProject(project) {
       axios
         .post("/api/projects", qs.stringify(project), {
+          transformResponse: [(data) => jsonBig.parse(data)],
           headers: {
             "content-type": "application/x-www-form-urlencoded;charset=utf-8",
           },

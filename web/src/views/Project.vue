@@ -124,6 +124,7 @@ import axios from "axios";
 import qs from "qs";
 import PieChart from "@/components/PieChart.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
+import JSONBig from "json-bigint";
 import {
   mdiCamera,
   mdiMapMarker,
@@ -134,10 +135,13 @@ import {
   mdiInformationOutline,
 } from "@mdi/js";
 import Error from "@/components/Error.vue";
+var jsonBig = JSONBig({ storeAsString: true });
 
 function getProject(projectID, callback) {
   axios
-    .get("/api/project/" + projectID)
+    .get("/api/project/" + projectID, {
+      transformResponse: [(data) => jsonBig.parse(data)],
+    })
     .then((result) => {
       var data = result.data;
       if (data.success) {
@@ -244,6 +248,7 @@ export default {
           "/api/project/" + this.$route.params.id + "/execute",
           qs.stringify(query),
           {
+            transformResponse: [(data) => jsonBig.parse(data)],
             headers: {
               "content-type": "application/x-www-form-urlencoded;charset=utf-8",
             },
@@ -283,6 +288,7 @@ export default {
             starring: star,
           }),
           {
+            transformResponse: [(data) => jsonBig.parse(data)],
             headers: {
               "content-type": "application/x-www-form-urlencoded;charset=utf-8",
             },
@@ -341,6 +347,7 @@ export default {
       this.issue_error = undefined;
       axios
         .get("/api/project/" + this.$route.params.id + "/issues", {
+          transformResponse: [(data) => jsonBig.parse(data)],
           params: query,
         })
         .then((result) => {
@@ -371,6 +378,7 @@ export default {
               // fetch users
               axios
                 .get("/api/project/" + this.$route.params.id + "/lazy", {
+                  transformResponse: [(data) => jsonBig.parse(data)],
                   params: {
                     q: qs.stringify(userQuery),
                   },

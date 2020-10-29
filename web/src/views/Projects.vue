@@ -69,7 +69,7 @@
       </div>
     </div>
     <div
-      v-else-if="this.$root.userProjects == 0"
+      v-else-if="this.$root.userProjects.length == 0"
       class="card text-left text-center py-3 border-bottom border-muted border-top-0 border-left-0 border-right-0"
     >
       <h3>You do not have any projects</h3>
