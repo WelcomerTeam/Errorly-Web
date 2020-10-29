@@ -3,6 +3,7 @@ package errorly
 import (
 	"encoding/csv"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -141,6 +142,7 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 		return
 	}
 
+	fetchStarred := false
 	fuzzyEntries := make([]string, 0)
 	for _, part := range parts {
 		subpart := strings.Split(part, ":")
@@ -172,7 +174,7 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 				case "resolved":
 					initialQuery = initialQuery.Where("type = ?", structs.EntryResolved)
 				case "starred":
-					initialQuery = initialQuery.Where("starred = ?", true)
+					fetchStarred = true
 				}
 			case "assignee":
 				switch strings.ToLower(thumb) {
@@ -206,9 +208,20 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 		}
 	}
 
-	totalissues, err = initialQuery.Limit(limit).Offset(limit * page).SelectAndCount()
-	issues = make([]structs.IssueEntry, 0, len(_issues))
+	// if fetching stars
+	// get starres and page
+	// else
+	// get starres and page
+	// get total issues
 
+	totalIssues := 0
+	issues = make([]structs.IssueEntry, 0, limit)
+
+	// Fetch issues
+	count, err := initialQuery.Clone().Limit(limit).Where("starred = ?", true).Offset(int(math.Max(0, float64(limit*page)))).SelectAndCount()
+	if err != nil {
+		return
+	}
 	if len(fuzzyEntries) > 0 {
 		for _, issue := range _issues {
 			for _, fuzz := range fuzzyEntries {
@@ -223,8 +236,40 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 			}
 		}
 	} else {
-		issues = _issues
+		issues = append(issues, _issues...)
 	}
+	totalIssues += count
+
+	if !fetchStarred {
+		// If we are not retrieving stars, we will retrieve any starred issues before normal issues
+		// if there are 15 starred issues, we will retrieve at least 10 regular ones and if there are
+		// 25+ starred issues, we do not retrieve any regular issues.
+		if len(issues) < limit {
+			count, _ := initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).SelectAndCount()
+			if err != nil {
+				return
+			}
+			if len(fuzzyEntries) > 0 {
+				for _, issue := range _issues {
+					for _, fuzz := range fuzzyEntries {
+						if fuzzy.Match(fuzz, issue.Error) {
+							issues = append(issues, issue)
+							break
+						}
+						if fuzzy.Match(fuzz, issue.Description) {
+							issues = append(issues, issue)
+							break
+						}
+					}
+				}
+			} else {
+				issues = append(issues, _issues...)
+			}
+			totalIssues += count
+		}
+	}
+
+	// totalissues, err = initialQuery.Limit(limit).Offset(limit * page).SelectAndCount()
 
 	// this is sort:starred-desc sort:type-desc sort:created_at-desc sort:occurrences-desc
 	// totalissues, err = er.Postgres.Model(&issues).Where("issue_entry.project_id = ?", projectID).Relation("CreatedBy").Relation("Assignee").Order("starred DESC").Order("type DESC").Order("created_at DESC").Order("occurrences DESC").Limit(limit).Offset(limit * page).SelectAndCount()
