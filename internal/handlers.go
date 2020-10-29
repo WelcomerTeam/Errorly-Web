@@ -1123,7 +1123,7 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 
 		now := time.Now().UTC()
 		issue := structs.IssueEntry{}
-		newProject := false
+		newIssue := false
 		err := er.Postgres.Model(&issue).Where("error = ?", issueError).Where("function = ?", issueFunction).Select()
 		if err != nil {
 			if err != pg.ErrNoRows {
@@ -1132,27 +1132,58 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 				return
 			}
 
-			newProject = true
+			assigneeID, err := strconv.ParseInt(r.FormValue("assigned"), 10, 64)
+			if err != nil {
+				println("Failed to convert to int", err.Error())
+				assigneeID = 0
+			}
+			println(assigneeID, r.FormValue("assigned"))
+
+			isContributor := false
+			if assigneeID == project.CreatedByID {
+				isContributor = true
+			} else {
+				for _, contributorID := range project.Settings.ContributorIDs {
+					if contributorID == assigneeID {
+						isContributor = true
+					}
+				}
+			}
+			println("Contributor", isContributor)
+			if !isContributor {
+				assigneeID = 0
+			}
+
+			commentsLocked, err := strconv.ParseBool(r.FormValue("lock_comments"))
+			if err != nil {
+				commentsLocked = false
+			}
+
+			newIssue = true
 			issue = structs.IssueEntry{
 				ID:             er.IDGen.GenerateID(),
 				ProjectID:      project.ID,
 				Starred:        false,
 				Type:           structs.EntryOpen,
 				Occurrences:    1,
-				AssigneeID:     assigneeID, // todo
+				AssigneeID:     assigneeID,
 				Error:          issueError,
 				Function:       issueFunction,
-				Checkpoint:     "", // todo
-				Description:    "", // todo
-				Traceback:      "", // todo
+				Checkpoint:     r.FormValue("checkpoint"),
+				Description:    r.FormValue("description"),
+				Traceback:      r.FormValue("traceback"),
 				LastModified:   now,
 				CreatedAt:      now,
 				CreatedByID:    user.ID,
 				CommentCount:   0,
-				CommentsLocked: false, // todo
+				CommentsLocked: commentsLocked,
 			}
-			// no such error
-			// make error
+
+			_, err = er.Postgres.Model(&issue).Insert()
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
 		} else {
 			// An error with this function and error already exists, increment it again
 			issue.Occurrences++
@@ -1165,14 +1196,10 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 			}
 		}
 
-		println(issue.ID, newProject)
-
-		// projectName := r.PostFormValue("display_name")
-		// if len(projectName) < 3 {
-		// 	passResponse(rw, "Invalid name was passed", false, http.StatusBadRequest)
-		// 	return
-		// }
-
+		passResponse(rw, structs.APIProjectIssueCreate{
+			New:   newIssue,
+			Issue: issue,
+		}, true, http.StatusOK)
 	}
 }
 

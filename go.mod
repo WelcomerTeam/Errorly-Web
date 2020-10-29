@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/derekstavis/go-qs v0.0.0-20180720192143-9eef69e6c4e7
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-pg/pg/v10 v10.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/sessions v1.2.1

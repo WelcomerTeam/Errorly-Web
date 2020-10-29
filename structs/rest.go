@@ -95,3 +95,9 @@ type APIProjectIssues struct {
 	TotalIssues int          `json:"total_issues"`
 	Issues      []IssueEntry `json:"issues"`
 }
+
+// APIProjectIssueCreate is the structure of the POST /api/project/{id}/issues endpoint
+type APIProjectIssueCreate struct {
+	New   bool       `json:"new"`
+	Issue IssueEntry `json:"issue"`
+}

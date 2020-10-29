@@ -139,7 +139,6 @@ export default {
         .then((result) => {
           var data = result.data;
           if (data.success) {
-            console.log(data.data);
             Object.entries(data.data.users).forEach(([id, user]) => {
               this.$set(this.contributors, id, user.name);
             });
@@ -179,7 +178,7 @@ export default {
           var data = result.data;
           if (data.success) {
             this.$router.push(
-              "/project/" + this.$route.params.id + "/issue/" + data.data.id
+              "/project/" + this.$route.params.id + "/issue/" + data.data.issue.id
             );
           } else {
             this.error = data.error;
