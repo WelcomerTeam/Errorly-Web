@@ -902,7 +902,26 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 			// Handle action passed
 			switch action {
 			case structs.ActionStar:
+				change := false
+				if issue.Starred {
+					project.StarredIssues--
+					change = true
+				}
 				issue.Starred = starring
+				if issue.Starred {
+					project.StarredIssues++
+					change = true
+				}
+
+				if change {
+					// Update starred issue counter on project
+					_, err = er.Postgres.Model(&project).WherePK().Update()
+					if err != nil {
+						passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+						return
+					}
+				}
+
 			case structs.ActionAssign:
 				if assigning {
 					issue.AssigneeID = assigneeID
