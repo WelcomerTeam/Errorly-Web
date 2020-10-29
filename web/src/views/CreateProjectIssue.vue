@@ -154,7 +154,7 @@ export default {
           if (error.response?.data) {
             this.error = error.response.data.error || error.response.data;
           } else {
-            this.error = error.toString();
+            this.error = error.text || error.toString();
           }
         });
     },
@@ -188,6 +188,7 @@ export default {
                 "/issue/" +
                 data.data.issue.id
             );
+            this.$set(this.$parent.issues, data.data.issue.id, data.data.issue);
           } else {
             this.error = data.error;
           }
@@ -196,7 +197,7 @@ export default {
           if (error.response?.data) {
             this.error = error.response.data.error || error.response.data;
           } else {
-            this.error = error.toString();
+            this.error = error.text || error.toString();
           }
         });
     },

@@ -186,10 +186,8 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 						return q, nil
 					})
 				default:
-					println("Assignee is ", thumb)
 					id, err := strconv.Atoi(thumb)
 					if err == nil {
-						println("OK")
 						initialQuery = initialQuery.Where("assignee_id = ?", id)
 					}
 				}
@@ -791,7 +789,6 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 			return
 		}
 
-		println("issues:", r.FormValue("issues"))
 		_issueIDs, err := qs.Unmarshal(r.FormValue("issues"))
 		if err != nil {
 			passResponse(rw, "IssueIDs argument is not valid", false, http.StatusBadRequest)
@@ -1134,10 +1131,8 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 
 			assigneeID, err := strconv.ParseInt(r.FormValue("assigned"), 10, 64)
 			if err != nil {
-				println("Failed to convert to int", err.Error())
 				assigneeID = 0
 			}
-			println(assigneeID, r.FormValue("assigned"))
 
 			isContributor := false
 			if assigneeID == project.CreatedByID {
@@ -1149,7 +1144,6 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 					}
 				}
 			}
-			println("Contributor", isContributor)
 			if !isContributor {
 				assigneeID = 0
 			}
@@ -1188,6 +1182,34 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 			// An error with this function and error already exists, increment it again
 			issue.Occurrences++
 			issue.LastModified = now
+
+			// We will overwrite the assignee and lock comments if the creator is the same person
+			if user.ID == issue.CreatedByID {
+				assigneeID, err := strconv.ParseInt(r.FormValue("assigned"), 10, 64)
+				if err != nil {
+					assigneeID = 0
+				}
+
+				isContributor := false
+				if assigneeID == project.CreatedByID {
+					isContributor = true
+				} else {
+					for _, contributorID := range project.Settings.ContributorIDs {
+						if contributorID == assigneeID {
+							isContributor = true
+						}
+					}
+				}
+				if isContributor {
+					issue.AssigneeID = assigneeID
+				}
+
+				commentsLocked, err := strconv.ParseBool(r.FormValue("lock_comments"))
+				if err == nil {
+					issue.CommentsLocked = commentsLocked
+				}
+			}
+
 			_, err = er.Postgres.Model(&issue).WherePK().Update()
 			if err != nil {
 				// Error updating query

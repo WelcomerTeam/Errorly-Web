@@ -48,7 +48,7 @@ new Vue({
           if (error.response?.data) {
             this.error = error.response.data.error || error.response.data;
           } else {
-            this.error = error.toString();
+            this.error = error.text || error.toString();
           }
         })
         .finally(() => {

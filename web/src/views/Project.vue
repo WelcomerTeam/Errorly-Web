@@ -270,7 +270,7 @@ export default {
           if (error.response?.data) {
             this.issue_error = error.response.data.error || error.response.data;
           } else {
-            this.issue_error = error.toString();
+            this.issue_error = error.text || error.toString();
           }
         })
         .finally(() => {
@@ -309,7 +309,7 @@ export default {
           if (error.response?.data) {
             this.issue_error = error.response.data.error || error.response.data;
           } else {
-            this.issue_error = error.toString();
+            this.issue_error = error.text || error.toString();
           }
         });
     },
@@ -402,7 +402,7 @@ export default {
                     this.issue_error =
                       error.response.data.error || error.response.data;
                   } else {
-                    this.issue_error = error.toString();
+                    this.issue_error = error.text || error.toString();
                   }
                 })
                 .finally(() => {
@@ -419,7 +419,7 @@ export default {
           if (error.response?.data) {
             this.issue_error = error.response.data.error || error.response.data;
           } else {
-            this.issue_error = error.toString();
+            this.issue_error = error.text || error.toString();
           }
         })
         .finally(() => {
