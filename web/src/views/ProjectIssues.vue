@@ -20,6 +20,7 @@
               class="dropdown-item"
               @click="
                 $parent.issue_query = v;
+                $parent.page = 0;
                 $parent.fetchIssues();
               "
               >{{ k }}
