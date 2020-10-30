@@ -175,6 +175,25 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 				case "starred":
 					fetchStarred = true
 				}
+			case "author":
+			case "from":
+				switch strings.ToLower(thumb) {
+				case "@me":
+					if userID != 0 {
+						initialQuery = initialQuery.Where("created_by_id = ?", userID)
+					}
+				case "no":
+					initialQuery = initialQuery.WhereGroup(func(q *orm.Query) (*orm.Query, error) {
+						q = q.WhereOr("created_by_id = ?", 0).WhereOr("created_by_id IS NULL")
+						return q, nil
+					})
+				default:
+					id, err := strconv.Atoi(thumb)
+					if err == nil {
+						initialQuery = initialQuery.Where("created_by_id = ?", id)
+					}
+				}
+			case "assigned":
 			case "assignee":
 				switch strings.ToLower(thumb) {
 				case "@me":
