@@ -342,8 +342,7 @@ export default {
       // }
     },
     loadIssues(query) {
-      this.issues_loading = true;
-      this.issues = {};
+      // this.issues_loading = true;
       this.issue_error = undefined;
       axios
         .get("/api/project/" + this.$route.params.id + "/issues", {
@@ -351,6 +350,7 @@ export default {
           params: query,
         })
         .then((result) => {
+          this.issues = {};
           var data = result.data;
           if (data.success) {
             var userQuery = [];

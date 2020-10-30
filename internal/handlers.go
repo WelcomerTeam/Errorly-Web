@@ -16,7 +16,6 @@ import (
 	"github.com/go-pg/pg/v10/orm"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-uuid"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 // Issues per page
@@ -214,7 +213,7 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 	// get starres and page
 	// get total issues
 
-	totalIssues := 0
+	totalissues = 0
 	issues = make([]structs.IssueEntry, 0, limit)
 
 	// Fetch issues
@@ -222,50 +221,58 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 	if err != nil {
 		return
 	}
+	totalissues += count
 	if len(fuzzyEntries) > 0 {
-		for _, issue := range _issues {
-			for _, fuzz := range fuzzyEntries {
-				if fuzzy.Match(fuzz, issue.Error) {
-					issues = append(issues, issue)
-					break
-				}
-				if fuzzy.Match(fuzz, issue.Description) {
-					issues = append(issues, issue)
-					break
-				}
-			}
-		}
+		// for _, issue := range _issues {
+		// 	for _, fuzz := range fuzzyEntries {
+		// 		if fuzzy.Match(fuzz, issue.Error) {
+		// 			issues = append(issues, issue)
+		// 			break
+		// 		}
+		// 		if fuzzy.Match(fuzz, issue.Description) {
+		// 			issues = append(issues, issue)
+		// 			break
+		// 		}
+		// 	}
+		// }
+		issues = append(issues, _issues...)
 	} else {
 		issues = append(issues, _issues...)
 	}
-	totalIssues += count
 
 	if !fetchStarred {
 		// If we are not retrieving stars, we will retrieve any starred issues before normal issues
 		// if there are 15 starred issues, we will retrieve at least 10 regular ones and if there are
 		// 25+ starred issues, we do not retrieve any regular issues.
 		if len(issues) < limit {
-			count, _ := initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).SelectAndCount()
+			count, err = initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).SelectAndCount()
 			if err != nil {
 				return
 			}
+			totalissues += count
 			if len(fuzzyEntries) > 0 {
-				for _, issue := range _issues {
-					for _, fuzz := range fuzzyEntries {
-						if fuzzy.Match(fuzz, issue.Error) {
-							issues = append(issues, issue)
-							break
-						}
-						if fuzzy.Match(fuzz, issue.Description) {
-							issues = append(issues, issue)
-							break
-						}
-					}
-				}
+				// for _, issue := range _issues {
+				// 	for _, fuzz := range fuzzyEntries {
+				// 		if fuzzy.Match(fuzz, issue.Error) {
+				// 			issues = append(issues, issue)
+				// 			break
+				// 		}
+				// 		if fuzzy.Match(fuzz, issue.Description) {
+				// 			issues = append(issues, issue)
+				// 			break
+				// 		}
+				// 	}
+				// }
+				issues = append(issues, _issues...)
 			} else {
 				issues = append(issues, _issues...)
 			}
-			totalIssues += count
+		} else {
+			count, err = initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).Count()
+			if err != nil {
+				return
+			}
+			totalissues += count
 		}
 	}
 

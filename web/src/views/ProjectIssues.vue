@@ -455,6 +455,39 @@
             Try broadening your search term or creating a new issue
           </p>
         </div>
+        <div class="text-center">
+          <div
+            class="btn"
+            @click="
+              if ($parent.page > 0) {
+                $parent.page--;
+                $parent.fetchIssues();
+              }
+            "
+          >
+            <svg-icon type="mdi" :path="mdiChevronLeft" />
+          </div>
+          <span
+            >Page <b>{{ $parent.page + 1 }}</b> of
+            <b>{{
+              Math.ceil($parent.total_issues / $parent.page_limit)
+            }}</b></span
+          >
+          <div
+            class="btn"
+            @click="
+              if (
+                $parent.page <
+                Math.ceil($parent.total_issues / $parent.page_limit)
+              ) {
+                $parent.page++;
+                $parent.fetchIssues();
+              }
+            "
+          >
+            <svg-icon type="mdi" :path="mdiChevronRight" />
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -484,6 +517,8 @@ import {
   mdiAccountRemove,
   mdiDotsHorizontal,
   mdiMessageTextLock,
+  mdiChevronLeft,
+  mdiChevronRight,
 } from "@mdi/js";
 
 export default {
@@ -570,6 +605,8 @@ export default {
       mdiCloseCircleOutline: mdiCloseCircleOutline,
       mdiDotsHorizontal: mdiDotsHorizontal,
       mdiMessageTextLock: mdiMessageTextLock,
+      mdiChevronLeft: mdiChevronLeft,
+      mdiChevronRight: mdiChevronRight,
     };
   },
   beforeRouteEnter(to, from, next) {
