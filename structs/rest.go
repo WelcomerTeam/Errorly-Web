@@ -93,7 +93,8 @@ type APIProjectExecutor struct {
 type APIProjectIssues struct {
 	Page        int          `json:"page"`
 	TotalIssues int          `json:"total_issues"`
-	Issues      []IssueEntry `json:"issues"`
+	Issues      []IssueEntry `json:"issues,omitempty"`
+	Issue       IssueEntry   `json:"issue,omitempty"`
 }
 
 // APIProjectIssueCreate is the structure of the POST /api/project/{id}/issues endpoint

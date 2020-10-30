@@ -158,7 +158,6 @@ function getProject(projectID, callback) {
       }
     });
 }
-// test: {{ this.$route.query.name }}
 
 export default {
   components: {
@@ -356,24 +355,26 @@ export default {
             var userQuery = [];
             this.total_issues = data.data.total_issues;
             this.page = data.data.page;
-            data.data.issues.forEach((issue) => {
-              issue.checked = false;
-              if (
-                issue.assignee_id != 0 &&
-                !(issue.assignee_id in this.contributors) &&
-                !userQuery.includes(issue.assignee_id)
-              ) {
-                userQuery.push(issue.assignee_id);
-              }
-              if (
-                issue.created_by_id != 0 &&
-                !(issue.created_by_id in this.contributors) &&
-                !userQuery.includes(issue.created_by_id)
-              ) {
-                userQuery.push(issue.created_by_id);
-              }
-              this.$set(this.issues, issue.id, issue);
-            });
+            if (data.data.issues) {
+              data.data.issues.forEach((issue) => {
+                issue.checked = false;
+                if (
+                  issue.assignee_id != 0 &&
+                  !(issue.assignee_id in this.contributors) &&
+                  !userQuery.includes(issue.assignee_id)
+                ) {
+                  userQuery.push(issue.assignee_id);
+                }
+                if (
+                  issue.created_by_id != 0 &&
+                  !(issue.created_by_id in this.contributors) &&
+                  !userQuery.includes(issue.created_by_id)
+                ) {
+                  userQuery.push(issue.created_by_id);
+                }
+                this.$set(this.issues, issue.id, issue);
+              });
+            }
             if (userQuery.length > 0) {
               // fetch users
               axios

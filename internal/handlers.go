@@ -1074,6 +1074,50 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 
 		urlQuery := r.URL.Query()
 
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		_issueID := urlQuery.Get("id")
+		if _issueID != "" {
+			// If an ID is specified we will instead return just the issue
+			issueID, err := strconv.ParseInt(_issueID, 10, 64)
+			if err != nil {
+				passResponse(rw, "ID argument is not valid", false, http.StatusBadRequest)
+				return
+			}
+
+			issue := structs.IssueEntry{}
+			err = er.Postgres.Model(&issue).Where("issue_entry.project_id = ?", project.ID).Where("issue_entry.id = ?", issueID).Select()
+			if err != nil {
+				if err == pg.ErrNoRows {
+					// Invalid issue ID
+					passResponse(rw, "Could not find this issue", false, http.StatusBadRequest)
+					return
+				}
+
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
+
+			passResponse(rw, structs.APIProjectIssues{
+				Issue: issue,
+			}, true, http.StatusOK)
+			return
+		}
+
 		// Get query from search
 		query := urlQuery.Get("q")
 		if query == "" {
@@ -1096,22 +1140,6 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 		page, err := strconv.Atoi(_page)
 		if err != nil {
 			passResponse(rw, "Page argument is not valid", false, http.StatusBadRequest)
-			return
-		}
-
-		// Authenticate the user
-		auth, user := er.AuthenticateSession(session)
-
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
-		if !ok {
-			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
-			return
-		}
-
-		if !viewable {
-			// No permission to view project. We will treat like the project
-			// does not exist.
-			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
 			return
 		}
 

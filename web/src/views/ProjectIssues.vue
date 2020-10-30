@@ -460,7 +460,10 @@
             class="btn"
             @click="
               if ($parent.page > 0) {
-                $parent.page--;
+                $parent.page = Math.min(
+                  Math.max($parent.page - 1, 0),
+                  Math.ceil($parent.total_issues / $parent.page_limit) - 1
+                );
                 $parent.fetchIssues();
               }
             "
@@ -478,9 +481,12 @@
             @click="
               if (
                 $parent.page <
-                Math.ceil($parent.total_issues / $parent.page_limit)
+                Math.ceil($parent.total_issues / $parent.page_limit) - 1
               ) {
-                $parent.page++;
+                $parent.page = Math.min(
+                  Math.max($parent.page + 1, 0),
+                  Math.ceil($parent.total_issues / $parent.page_limit) - 1
+                );
                 $parent.fetchIssues();
               }
             "

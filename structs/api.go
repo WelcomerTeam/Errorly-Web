@@ -176,7 +176,7 @@ type IssueEntry struct {
 
 	Type        EntryType `json:"type"`
 	Occurrences int       `json:"occurrences"`
-	Assignee    User      `json:"assignee,omitempty" pg:"rel:has-one"`
+	Assignee    *User     `json:"assignee,omitempty" pg:"rel:has-one"`
 	AssigneeID  int64     `json:"assignee_id" sql:",notnull"`
 
 	Error       string `json:"error"`
