@@ -44,7 +44,7 @@ type BaseResponse struct {
 // APIMe is the structure of the /api/me endpoint
 type APIMe struct {
 	Authenticated bool             `json:"authenticated"`
-	User          User             `json:"user"`
+	User          *User            `json:"user"`
 	Projects      []PartialProject `json:"projects"`
 }
 
@@ -72,7 +72,7 @@ type PartialUser struct {
 
 // APIProject is the structure of the GET /api/project/{id} endpoint
 type APIProject struct {
-	Project      Project               `json:"project"`
+	Project      *Project              `json:"project"`
 	Contributors map[int64]PartialUser `json:"contributors"`
 }
 
@@ -86,7 +86,7 @@ type APIProjectLazy struct {
 type APIProjectExecutor struct {
 	Issues      []IssueEntry `json:"issues"`
 	Unavailable []int64      `json:"unavailable"`
-	Project     Project      `json:"project"`
+	Project     *Project     `json:"project"`
 }
 
 // APIProjectIssues is the structure of the GET /api/project/{id}/issues endpoint
@@ -94,11 +94,11 @@ type APIProjectIssues struct {
 	Page        int          `json:"page"`
 	TotalIssues int          `json:"total_issues"`
 	Issues      []IssueEntry `json:"issues,omitempty"`
-	Issue       IssueEntry   `json:"issue,omitempty"`
+	Issue       *IssueEntry  `json:"issue,omitempty"`
 }
 
 // APIProjectIssueCreate is the structure of the POST /api/project/{id}/issues endpoint
 type APIProjectIssueCreate struct {
-	New   bool       `json:"new"`
-	Issue IssueEntry `json:"issue"`
+	New   bool        `json:"new"`
+	Issue *IssueEntry `json:"issue"`
 }

@@ -39,7 +39,11 @@
             >{{ issue.checkpoint }}</span
           >
         </h2>
-        <span class="badge rounded-pill bg-primary" aria-label="Error type">
+        <span
+          class="badge rounded-pill"
+          :style="{ background: statusBackground[issue.type] }"
+          aria-label="Error type"
+        >
           <svg-icon
             type="mdi"
             width="20"
@@ -51,7 +55,7 @@
         <span class="dot-right pl-2">
           <span class="pl-1">
             <span
-              class="badge rounded-pill bg-primary"
+              class="badge rounded-pill bg-primary mr-1"
               v-if="$parent.getIntegration(issue.created_by_id)"
               >Integration</span
             >
@@ -95,13 +99,14 @@
           /> -->
           <div class="card ml-3" style="align-items: stretch; width: 100%">
             <div class="card-header text-black-50">
-
-            <span
-              class="badge rounded-pill bg-primary"
-              v-if="$parent.getIntegration(issue.created_by_id)"
-              >Integration</span
-            >
-            <b class="text-dark">{{ $parent.getUsername(issue.created_by_id) || "ghost" }}</b>
+              <span
+                class="badge rounded-pill bg-primary mr-1"
+                v-if="$parent.getIntegration(issue.created_by_id)"
+                >Integration</span
+              >
+              <b class="text-dark">{{
+                $parent.getUsername(issue.created_by_id) || "ghost"
+              }}</b>
               created this issue
               <timeago
                 :datetime="issue.created_at"
@@ -114,13 +119,17 @@
               <pre
                 class="bg-light mt-3 mb-0 rounded-lg p-3 border border-muted"
                 v-if="issue.traceback"
-              >{{ issue.traceback }}
+                >{{ issue.traceback }}
               </pre>
             </div>
           </div>
         </div>
 
-        <div class="d-flex mt-4" v-for="(comment, index) in comments" v-bind:key="index">
+        <div
+          class="d-flex mt-4"
+          v-for="(comment, index) in comments"
+          v-bind:key="index"
+        >
           <pre>{{ comment }}</pre>
           <!-- <img
             width="40"
@@ -192,7 +201,8 @@
           <button
             type="button"
             class="btn btn-success mr-2"
-            @click="sendComment()"
+            :disabled="!validRequest()"
+            @click="sendComment(comment)"
           >
             Comment
           </button>
@@ -204,6 +214,7 @@
 
 <script>
 import axios from "axios";
+import qs from "qs";
 import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
 import { mdiChevronLeft } from "@mdi/js";
@@ -321,11 +332,42 @@ export default {
       }
       this.issue_loading = false;
     },
-    sendComment() {
+    validRequest() {
+      if (this.comment.trim() == "") {
+        return false;
+      }
+      return true;
+    },
+    sendComment(comment) {
       axios
-        .post("/api/project/" + projectID + "/issue/" + issueID + "/comments", {
-          transformResponse: [(data) => jsonBig.parse(data)],
+        .post(
+          "/api/project/" +
+            this.$route.params.id +
+            "/issue/" +
+            this.$route.params.issueid +
+            "/comments",
+          qs.stringify({
+            content: comment,
+          }),
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.comments.push(data.data.comment);
+          } else {
+            this.issue_error = data.error;
+          }
         })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.issue_error = error.response.data.error || error.response.data;
+          } else {
+            this.issue_error = error.text || error.toString();
+          }
+        });
     },
   },
 };

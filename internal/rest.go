@@ -125,7 +125,7 @@ func ParseUserToken(token string) (uid int64, random []byte, valid bool) {
 }
 
 // AuthenticateSession verifies the session is valid
-func (er *Errorly) AuthenticateSession(session *sessions.Session) (auth bool, user structs.User) {
+func (er *Errorly) AuthenticateSession(session *sessions.Session) (auth bool, user *structs.User) {
 	token, ok := session.Values["token"].(string)
 	if !ok {
 		auth = false
@@ -138,19 +138,20 @@ func (er *Errorly) AuthenticateSession(session *sessions.Session) (auth bool, us
 		return
 	}
 
-	err := er.Postgres.Model(&user).Where("id = ?", uid).Select()
+	_user := &structs.User{}
+	err := er.Postgres.Model(_user).Where("id = ?", uid).Select()
 	if err != nil {
 		er.Logger.Error().Err(err).Msg("Failed to fetch user")
 		auth = false
 		return
 	}
 
-	if user.Token != token {
+	if _user.Token != token {
 		auth = false
 		return
 	}
 
-	return true, user
+	return true, _user
 }
 
 func createEndpoints(er *Errorly) (router *MethodRouter) {

@@ -170,7 +170,7 @@ export default {
     createIssue(issue) {
       axios
         .post(
-          "/api/project/" + this.$route.params.id + "/issue",
+          "/api/project/" + this.$route.params.id + "/issues",
           qs.stringify(issue),
           {
             transformResponse: [(data) => jsonBig.parse(data)],
