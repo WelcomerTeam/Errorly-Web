@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/json-iterator/go v1.1.10
-	github.com/lithammer/fuzzysearch v1.1.1
+	// github.com/lithammer/fuzzysearch v1.1.1
 	github.com/rs/zerolog v1.20.0
 	github.com/valyala/fasthttp v1.16.0
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43

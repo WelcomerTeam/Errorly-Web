@@ -455,9 +455,8 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 			project := &structs.Project{}
 			sanitizedProjectIDs := make([]int64, 0)
 			projects = make([]structs.PartialProject, 0, len(user.ProjectIDs))
-
 			for _, projectID := range user.ProjectIDs {
-				err := er.Postgres.Model(project).Where("id = ?", projectID).Select()
+				err := er.Postgres.Model(project).Where("id = ?", projectID).Select() // TODO: Convert to a single request
 				if err == nil {
 					projects = append(projects, structs.PartialProject{
 						ID:             project.ID,
@@ -717,27 +716,26 @@ func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		contributorIDs := make([]int64, 0, len(project.Settings.ContributorIDs))
-		contributors := make(map[int64]structs.PartialUser)
 
 		for _, contributorID := range project.Settings.ContributorIDs {
-			_, ok := contributors[contributorID]
-			if ok {
-				// Do not fetch the user if we already have fetched them
-				continue
-			}
-
 			if isContributor(project, contributorID) {
-				contributor := structs.User{}
-				err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select()
-				if err != nil {
-					er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
-				} else {
-					contributors[contributor.ID] = structs.PartialUser{
-						ID:          contributor.ID,
-						Name:        contributor.Name,
-						Integration: contributor.Integration,
-					}
-				}
+				contributorIDs = append(contributorIDs, contributorID)
+			}
+		}
+
+		_contributors := []structs.User{}
+		err := er.Postgres.Model(&_contributors).WhereIn("id = ?", contributorIDs).Select()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		contributors := make(map[int64]structs.PartialUser)
+		for _, contributor := range _contributors {
+			contributors[contributor.ID] = structs.PartialUser{
+				ID:          contributor.ID,
+				Name:        contributor.Name,
+				Integration: contributor.Integration,
 			}
 		}
 
@@ -818,7 +816,7 @@ func APIProjectLazyHandler(er *Errorly) http.HandlerFunc {
 
 			if isContributor(project, contributorID) {
 				contributor := structs.User{}
-				err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select()
+				err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select() // TODO: Convert to single request
 				if err != nil {
 					er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
 				} else {
@@ -956,7 +954,8 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 		for _, issueID := range issueIDs {
 			// Fetch the request
 			issue := structs.IssueEntry{}
-			err = er.Postgres.Model(&issue).Where("project_id = ?", project.ID).Where("id = ?", issueID).Select()
+			err = er.Postgres.Model(&issue).Where("project_id = ?", project.ID).Where("id = ?", issueID).Select() // TODO: convert this to a single request
+
 			if err != nil {
 				if err == pg.ErrNoRows {
 					// Invalid issue ID
@@ -1080,6 +1079,63 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 			Unavailable: unavailable,
 			Project:     project,
 		}, true, http.StatusOK)
+	}
+}
+
+// APIProjectFetchIssueHandler returns an issue from a project
+func APIProjectFetchIssueHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, &user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+			return
+		}
+
+		// If an ID is specified we will instead return just the issue
+		issueID, err := strconv.ParseInt(_issueID, 10, 64)
+		if err != nil {
+			passResponse(rw, "ID argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		issue := structs.IssueEntry{}
+		err = er.Postgres.Model(&issue).Where("issue_entry.project_id = ?", project.ID).Where("issue_entry.id = ?", issueID).Select()
+		if err != nil {
+			if err == pg.ErrNoRows {
+				// Invalid issue ID
+				passResponse(rw, "Could not find this issue", false, http.StatusBadRequest)
+				return
+			}
+
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		passResponse(rw, structs.APIProjectIssues{
+			Issue: issue,
+		}, true, http.StatusOK)
+		return
 	}
 }
 
