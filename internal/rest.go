@@ -180,7 +180,7 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// DELETE /api/projects/{project_id}/issue/{issue_id} - Delete issue
 
 	// Comments:
-	// POST /api/project/{project_id}/issue/{issue_id}/comments - Create issue comment
+	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentCreateHandler(er), "POST") // Create issue comment
 	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
 	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
 	// GET  /api/project/{project_id}/issue/{issue_id}/comments - List issue comments

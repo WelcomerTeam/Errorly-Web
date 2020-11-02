@@ -13,89 +13,88 @@
       <h3 class="pb-1">Create Issue</h3>
     </div>
 
-    <form-input
-      v-model="issue.error"
-      :type="'text'"
-      :placeholder="'Title (required)'"
-      class="mb-2"
-    />
-    <form-input
-      v-model="issue.description"
-      :type="'area'"
-      :placeholder="'Description'"
-      class="mb-4"
-    />
+    <div class="text-center py-5" v-if="this.error">
+      <error :message="this.error" />
+    </div>
+    <div v-else>
+      <form-input
+        v-model="issue.error"
+        :type="'text'"
+        :placeholder="'Title (required)'"
+        class="mb-2"
+      />
+      <form-input
+        v-model="issue.description"
+        :type="'area'"
+        :placeholder="'Description'"
+        class="mb-4"
+      />
 
-    <form-input
-      v-model="issue.function"
-      :type="'text'"
-      :placeholder="'createIssue()'"
-      :label="'Function (required)'"
-    />
-    <p class="text-muted">
-      The function is a placeholder for identifying the function the error is in
-    </p>
+      <form-input
+        v-model="issue.function"
+        :type="'text'"
+        :placeholder="'createIssue()'"
+        :label="'Function (required)'"
+      />
+      <p class="text-muted">
+        The function is a place holder for identifying the function the error is
+        in
+      </p>
 
-    <form-input
-      v-model="issue.checkpoint"
-      :type="'text'"
-      :placeholder="'internal/api.go:53'"
-      :label="'Checkpoint'"
-    />
-    <p class="text-muted">
-      The checkpoint allows you to identify the exact file and line number the
-      error occurred on. If you don't know the line number, you do not have to
-      include it.
-    </p>
+      <form-input
+        v-model="issue.checkpoint"
+        :type="'text'"
+        :placeholder="'internal/api.go:53'"
+        :label="'Checkpoint'"
+      />
+      <p class="text-muted">
+        The checkpoint allows you to identify the exact file and line number the
+        error occurred on. If you don't know the line number, you do not have to
+        include it.
+      </p>
 
-    <form-input
-      v-model="issue.traceback"
-      :type="'area'"
-      :placeholder="'Traceback'"
-      :label="'Traceback'"
-    />
-    <p class="text-muted">Enter a detailed issue traceback if you have one.</p>
+      <form-input
+        v-model="issue.traceback"
+        :type="'area'"
+        :placeholder="'Traceback'"
+        :label="'Traceback'"
+      />
+      <p class="text-muted">
+        Enter a detailed issue traceback if you have one.
+      </p>
 
-    <form-input
-      v-model="issue.lock_comments"
-      :type="'checkbox'"
-      :label="'Lock comments'"
-    />
-    <p class="text-muted">If enabled, comments are locked when created</p>
+      <form-input
+        v-model="issue.lock_comments"
+        :type="'checkbox'"
+        :label="'Lock comments'"
+      />
+      <p class="text-muted">If enabled, comments are locked when created</p>
 
-    <form-input
-      v-model="issue.assigned"
-      :type="'select'"
-      :label="'Assign to'"
-      :values="contributors"
-    />
-    <p class="text-muted">
-      If necessary, you can assign yourself or someone else to the issue when
-      making
-    </p>
+      <form-input
+        v-model="issue.assigned"
+        :type="'select'"
+        :label="'Assign to'"
+        :values="contributors"
+      />
+      <p class="text-muted">
+        If necessary, you can assign yourself or someone else to the issue when
+        making
+      </p>
 
-    <p class="text-muted">
-      When creating an issue, if it finds an issue with the same title and
-      function, it will increment the occurrences of the already made issue
-      instead of creating a new one.
-    </p>
+      <p class="text-muted">
+        When creating an issue, if it finds an issue with the same title and
+        function, it will increment the occurrences of the already made issue
+        instead of creating a new one.
+      </p>
 
-    <button
-      type="button"
-      class="btn btn-success"
-      :disabled="!validRequest()"
-      v-on:click="createIssue(issue)"
-    >
-      Create Issue
-    </button>
-
-    <div
-      class="border border-danger text-dark rounded-sm p-3 my-4"
-      role="alert"
-      v-if="this.error"
-    >
-      <h5 class="font-weight-bold">Error:</h5>
-      {{ this.error }}
+      <button
+        type="button"
+        class="btn btn-success"
+        :disabled="!validRequest()"
+        v-on:click="createIssue(issue)"
+      >
+        Create Issue
+      </button>
     </div>
   </div>
 </template>
@@ -103,6 +102,7 @@
 <script>
 import axios from "axios";
 import qs from "qs";
+import Error from "@/components/Error.vue";
 import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
 import JSONBig from "json-bigint";
@@ -110,7 +110,7 @@ import { mdiChevronLeft } from "@mdi/js";
 var jsonBig = JSONBig({ storeAsString: true });
 
 export default {
-  components: { FormInput, SvgIcon },
+  components: { FormInput, SvgIcon, Error },
   name: "CreateProjectIssue",
   data() {
     return {

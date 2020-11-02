@@ -18,71 +18,68 @@
       >
     </div>
 
-    <form-input
-      v-model="project.display_name"
-      :type="'text'"
-      :label="'Project Name'"
-    />
-    <p class="text-muted">
-      Having a short, memorable and relevant project name is always important.
-      Project names require at least 3 characters.
-    </p>
+    <div class="text-center py-5" v-if="this.error">
+      <error :message="this.error" />
+    </div>
+    <div v-else>
+      <form-input
+        v-model="project.display_name"
+        :type="'text'"
+        :label="'Project Name'"
+      />
+      <p class="text-muted">
+        Having a short, memorable and relevant project name is always important.
+        Project names require at least 3 characters.
+      </p>
 
-    <form-input
-      v-model="project.description"
-      :type="'text'"
-      :label="'Description (optional)'"
-    />
-    <p class="text-muted">
-      Describing what you do is important when people stumble upon your project.
-    </p>
+      <form-input
+        v-model="project.description"
+        :type="'text'"
+        :label="'Description (optional)'"
+      />
+      <p class="text-muted">
+        Describing what you do is important when people stumble upon your
+        project.
+      </p>
 
-    <form-input
-      v-model="project.url"
-      :type="'text'"
-      :label="'URL (optional)'"
-    />
-    <p class="text-muted">
-      Have a website? Link it so people can view it when they visit your
-      project. Valid URLs only, please.
-    </p>
+      <form-input
+        v-model="project.url"
+        :type="'text'"
+        :label="'URL (optional)'"
+      />
+      <p class="text-muted">
+        Have a website? Link it so people can view it when they visit your
+        project. Valid URLs only, please.
+      </p>
 
-    <form-input
-      v-model="project.private"
-      :type="'checkbox'"
-      :label="'Private'"
-    />
-    <p class="text-muted">
-      If your project is private, only contributors are able to view it the
-      project.
-    </p>
+      <form-input
+        v-model="project.private"
+        :type="'checkbox'"
+        :label="'Private'"
+      />
+      <p class="text-muted">
+        If your project is private, only contributors are able to view it the
+        project.
+      </p>
 
-    <form-input
-      v-model="project.limited"
-      :type="'checkbox'"
-      :label="'Limited'"
-    />
-    <p class="text-muted">
-      If your project is limited, only contributors and integrations are able to
-      create new issues.
-    </p>
+      <form-input
+        v-model="project.limited"
+        :type="'checkbox'"
+        :label="'Limited'"
+      />
+      <p class="text-muted">
+        If your project is limited, only contributors and integrations are able
+        to create new issues.
+      </p>
 
-    <button
-      type="button"
-      class="btn btn-success"
-      :disabled="!validRequest()"
-      v-on:click="createProject(project)"
-    >
-      Create Project
-    </button>
-
-    <div
-      class="border border-danger text-dark rounded-sm p-3 my-4"
-      role="alert"
-      v-if="this.error"
-    >
-      <h5 class="font-weight-bold">Error:</h5>
-      {{ this.error }}
+      <button
+        type="button"
+        class="btn btn-success"
+        :disabled="!validRequest()"
+        v-on:click="createProject(project)"
+      >
+        Create Project
+      </button>
     </div>
   </div>
 </template>
@@ -90,6 +87,7 @@
 <script>
 import axios from "axios";
 import qs from "qs";
+import Error from "@/components/Error.vue";
 import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
 import JSONBig from "json-bigint";
@@ -100,6 +98,7 @@ export default {
   components: {
     FormInput,
     SvgIcon,
+    Error,
   },
   name: "CreateProject",
   data: function () {

@@ -525,7 +525,7 @@ func APIProjectCreateHandler(er *Errorly) http.HandlerFunc {
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
 		if !auth {
-			passResponse(rw, "You must be signed into create a project", false, http.StatusForbidden)
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
 			return
 		}
 
@@ -922,7 +922,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
 		if !auth {
-			passResponse(rw, "You must be signed in to do this", false, http.StatusForbidden)
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
 			return
 		}
 
@@ -1249,7 +1249,7 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
 		if !auth {
-			passResponse(rw, "You must be signed into create a project", false, http.StatusForbidden)
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
 			return
 		}
 
@@ -1396,6 +1396,102 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 			New:   newIssue,
 			Issue: issue,
 		}, true, http.StatusOK)
+	}
+}
+
+// APIProjectIssueCommentCreateHandler handles the creation of issue comments
+func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+			return
+		}
+
+		if project.Settings.Limited && !elevated {
+			passResponse(rw, "You need to be a contributor of this project to create issues", false, http.StatusForbidden)
+			return
+		}
+
+		if project.Settings.Archived {
+			passResponse(rw, "This project is archived", false, http.StatusForbidden)
+			return
+		}
+
+		// If an ID is specified we will instead return just the issue
+		issueID, err := strconv.ParseInt(_issueID, 10, 64)
+		if err != nil {
+			passResponse(rw, "ID argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		issue := &structs.IssueEntry{}
+		err = er.Postgres.Model(issue).Where("issue_entry.project_id = ?", project.ID).Where("issue_entry.id = ?", issueID).Select()
+		if err != nil {
+			if err == pg.ErrNoRows {
+				// Invalid issue ID
+				passResponse(rw, "Could not find this issue", false, http.StatusBadRequest)
+				return
+			}
+
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		if issue.CommentsLocked {
+			passResponse(rw, "Comments are locked for this issue", false, http.StatusForbidden)
+			return
+		}
+
+		content := strings.TrimSpace(r.PostFormValue("content"))
+		if len(content) == 0 {
+			passResponse(rw, "Invalid message content was passed", false, http.StatusBadRequest)
+			return
+		}
+
+		now := time.Now().UTC()
+		comment := &structs.Comment{
+			ID:          er.IDGen.GenerateID(),
+			IssueID:     issue.ID,
+			CreatedAt:   now,
+			CreatedByID: user.ID,
+			Type:        structs.Message,
+			Content:     content,
+		}
+
+		println("content", comment.Content)
+
 	}
 }
 
