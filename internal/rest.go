@@ -183,7 +183,7 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentCreateHandler(er), "POST") // Create issue comment
 	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
 	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
-	// GET  /api/project/{project_id}/issue/{issue_id}/comments - List issue comments
+	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentHandler(er), "GET") //  Lists issue comments
 
 	// Webhooks:
 	// POST /api/project/{project_id}/webhook - Creates a webhook

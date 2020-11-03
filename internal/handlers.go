@@ -344,9 +344,11 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 		session, _ := er.Store.Get(r, sessionName)
 		defer session.Save(r, rw)
 
+		urlQuery := r.URL.Query()
+
 		// Validate the CSRF in the session and in the HTTP request.
 		// If there is no CSRF in the session it is likely our fault :)
-		_csrfString := r.URL.Query().Get("state")
+		_csrfString := urlQuery.Get("state")
 		csrfString, ok := session.Values["oauth_csrf"].(string)
 		if !ok {
 			http.Error(rw, "Missing CSRF state", http.StatusInternalServerError)
@@ -361,7 +363,7 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 		delete(session.Values, "oauth_csrf")
 
 		// Create an OAuth exchange with the code we were given.
-		code := r.URL.Query().Get("code")
+		code := urlQuery.Get("code")
 		token, err := er.Configuration.OAuth.Exchange(er.ctx, code)
 		if err != nil {
 			http.Error(rw, "Failed to exchange code: "+err.Error(), http.StatusInternalServerError)
@@ -1402,7 +1404,6 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 // APIProjectIssueCommentCreateHandler handles the creation of issue comments
 func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-
 		session, _ := er.Store.Get(r, sessionName)
 		defer session.Save(r, rw)
 
@@ -1497,6 +1498,90 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		passResponse(rw, comment, true, http.StatusOK)
+	}
+}
+
+// APIProjectIssueCommentHandler returns a list of comments from an issue and returns paginated results
+func APIProjectIssueCommentHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+		}
+
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+			return
+		}
+
+		// If an ID is specified we will instead return just the issue
+		issueID, err := strconv.ParseInt(_issueID, 10, 64)
+		if err != nil {
+			passResponse(rw, "ID argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		issue := &structs.IssueEntry{}
+		err = er.Postgres.Model(issue).Where("issue_entry.project_id = ?", project.ID).Where("issue_entry.id = ?", issueID).Select()
+		if err != nil {
+			if err == pg.ErrNoRows {
+				// Invalid issue ID
+				passResponse(rw, "Could not find this issue", false, http.StatusBadRequest)
+				return
+			}
+
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		// We will use the same page limit for the issues per query limit
+		_issueLimit := pageLimit
+
+		// Retrieve page argument from URL
+		_page := r.URL.Query().Get("page")
+		if _page == "" {
+			_page = "0"
+		}
+
+		// Check page is a valid number. We will use the first page
+		// argument provided as multiple could be passed.
+		page, err := strconv.Atoi(_page)
+		if err != nil {
+			passResponse(rw, "Page argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		comments := make([]structs.Comment, 0, _issueLimit)
+		err = er.Postgres.Model(&comments).Limit(_issueLimit).Where("issue_id = ?", issue.ID).Offset(int(math.Max(0, float64(_issueLimit*page)))).Select()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		passResponse(rw, structs.APIProjectIssueComments{
+			Page:     page,
+			Comments: comments,
+		}, true, http.StatusOK)
 	}
 }
 

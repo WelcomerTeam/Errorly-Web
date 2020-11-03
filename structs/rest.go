@@ -102,3 +102,9 @@ type APIProjectIssueCreate struct {
 	New   bool        `json:"new"`
 	Issue *IssueEntry `json:"issue"`
 }
+
+// APIProjectIssueComments is the structure of the GT /api/project/{id}/issues/{issue_id}/comments endpoint
+type APIProjectIssueComments struct {
+	Page     int       `json:"page"`
+	Comments []Comment `json:"comments"`
+}
