@@ -104,9 +104,9 @@ type User struct {
 
 	// Integration values
 	ProjectID   int64 `json:"project_id,omitempty"`
-	Integration bool  `json:"integration" sql:",notnull"`
+	Integration bool  `json:"integration" pg:",use_zero"`
 	CreatedBy   *User `json:"created_by,omitempty" pg:"rel:has-one"`
-	CreatedByID int64 `json:"created_by_id,omitempty" sql:",notnull"`
+	CreatedByID int64 `json:"created_by_id,omitempty" pg:",use_zero"`
 
 	Token string `json:"-"`
 }
@@ -117,7 +117,7 @@ type Project struct {
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
 	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
+	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
 	Integrations []User       `json:"integrations" pg:"rel:has-many,join_fk:project_id"`
 	Webhooks     []Webhook    `json:"webhooks" pg:"rel:has-many,join_fk:project_id"`
@@ -142,10 +142,10 @@ type ProjectSettings struct {
 	Description string `json:"description"`
 	URL         string `json:"url"` // Link to a project appropriate URL. Will not show if left blank.
 
-	Archived bool `json:"archived" sql:",notnull"` // When archived, no new issues can be made until unarchived by creator
-	Private  bool `json:"private" sql:",notnull"`  // If a project is private, users can only view it if they have been added as a contributor
+	Archived bool `json:"archived" pg:",use_zero"` // When archived, no new issues can be made until unarchived by creator
+	Private  bool `json:"private" pg:",use_zero"`  // If a project is private, users can only view it if they have been added as a contributor
 
-	Limited        bool    `json:"limited" sql:",notnull"` // When enabled, only contributes can create errors
+	Limited        bool    `json:"limited" pg:",use_zero"` // When enabled, only contributes can create errors
 	ContributorIDs []int64 `json:"contributor_ids"`        // Contributors for project
 }
 
@@ -154,16 +154,16 @@ type Webhook struct {
 	ID        int64 `json:"id"`
 	ProjectID int64 `json:"project_id"`
 
-	Active   bool  `json:"active" sql:",notnull"` // Boolean if it is enabled
+	Active   bool  `json:"active" pg:",use_zero"` // Boolean if it is enabled
 	Failures uint8 `json:"failures"`              // If 4 failures sending webhook, will disable webhook
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
 	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
+	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
 	URL         string      `json:"url"`
 	Type        WebhookType `json:"type"`
-	JSONContent bool        `json:"json_content" sql:",notnull"` // When true, uses json else urlencoded
+	JSONContent bool        `json:"json_content" pg:",use_zero"` // When true, uses json else urlencoded
 	Secret      string      `json:"secret"`                      // Secret to send in the header to confirm origin
 }
 
@@ -172,12 +172,12 @@ type IssueEntry struct {
 	ID        int64 `json:"id"`
 	ProjectID int64 `json:"project_id"`
 
-	Starred bool `json:"starred" sql:",notnull"`
+	Starred bool `json:"starred" pg:",use_zero"`
 
 	Type        EntryType `json:"type"`
 	Occurrences int       `json:"occurrences"`
 	Assignee    *User     `json:"assignee,omitempty" pg:"rel:has-one"`
-	AssigneeID  int64     `json:"assignee_id" sql:",notnull"`
+	AssigneeID  int64     `json:"assignee_id" pg:",use_zero"`
 
 	Error       string `json:"error"`
 	Function    string `json:"function"`
@@ -189,10 +189,10 @@ type IssueEntry struct {
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
 	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
+	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
-	CommentCount   int64     `json:"comment_count" sql:",notnull"`
-	CommentsLocked bool      `json:"comments_locked" sql:",notnull"`
+	CommentCount   int64     `json:"comment_count" pg:",use_zero"`
+	CommentsLocked bool      `json:"comments_locked" pg:",use_zero"`
 	Comments       []Comment `json:"comment_ids,omitempty" pg:"rel:has-many,join_fk:issue_id"`
 }
 
@@ -203,10 +203,10 @@ type Comment struct {
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
 	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
-	CreatedByID int64     `json:"created_by_id" sql:",notnull"`
+	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
 	Type           ContentType `json:"type"`
 	Content        string      `json:"content,omitempty"`
-	IssueMarked    EntryType   `json:"issue_marked,omitempty"`
-	CommentsOpened bool        `json:"comments_opened,omitempty" sql:",notnull"`
+	IssueMarked    EntryType   `json:"issue_marked,omitempty" pg:",use_zero"`
+	CommentsOpened bool        `json:"comments_opened,omitempty" pg:",use_zero"`
 }

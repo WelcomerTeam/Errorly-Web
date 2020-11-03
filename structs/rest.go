@@ -107,4 +107,5 @@ type APIProjectIssueCreate struct {
 type APIProjectIssueComments struct {
 	Page     int       `json:"page"`
 	Comments []Comment `json:"comments"`
+	End      bool      `json:"end"`
 }

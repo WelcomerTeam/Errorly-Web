@@ -404,7 +404,7 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 					HookID:   discordUserResponse.ID.Int64(),
 
 					Name:       discordUserResponse.Username,
-					Avatar:     "https://cdn.discordapp.com/avatars/" + discordUserResponse.ID.String() + "/" + discordUserResponse.Avatar + ".png",
+					Avatar:     "https://cdn.discordapp.com/avatars/" + discordUserResponse.ID.String() + "/" + discordUserResponse.Avatar + ".png?size=32",
 					CreatedAt:  time.Now().UTC(),
 					ProjectIDs: make([]int64, 0),
 				}
@@ -425,7 +425,8 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 			// When we have a valid account, we will create a new user
 			// token and update the username and avatar if necessary.
 			token := CreateUserToken(user)
-			user.Avatar = "https://cdn.discordapp.com/avatars/" + discordUserResponse.ID.String() + "/" + discordUserResponse.Avatar + ".png"
+
+			user.Avatar = "https://cdn.discordapp.com/avatars/" + discordUserResponse.ID.String() + "/" + discordUserResponse.Avatar + ".png?size=32"
 			user.Name = discordUserResponse.Username
 			user.Token = token
 
@@ -987,7 +988,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 
 				if change {
 					// Update starred issue counter on project
-					_, err = er.Postgres.Model(&project).WherePK().Update()
+					_, err = er.Postgres.Model(project).WherePK().Update()
 					if err != nil {
 						passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 						return
@@ -1043,7 +1044,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 				}
 
 				// Update issues cache counter on project
-				_, err = er.Postgres.Model(&project).WherePK().Update()
+				_, err = er.Postgres.Model(project).WherePK().Update()
 				if err != nil {
 					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 					return
@@ -1581,6 +1582,7 @@ func APIProjectIssueCommentHandler(er *Errorly) http.HandlerFunc {
 		passResponse(rw, structs.APIProjectIssueComments{
 			Page:     page,
 			Comments: comments,
+			End:      len(comments) < _issueLimit,
 		}, true, http.StatusOK)
 	}
 }

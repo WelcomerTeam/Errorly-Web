@@ -90,14 +90,15 @@
         </span>
       </div>
 
-      <div class="p-4 border-bottom border-muted">
+      <div class="p-4 border-bottom border-muted d-flex flex-column">
         <div class="d-flex mt-4">
           <!-- <img
             width="40"
             height="40"
             src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png"
           /> -->
-          <div class="card ml-3" style="align-items: stretch; width: 100%">
+          <!-- ml-3 -->
+          <div class="card" style="align-items: stretch; width: 100%">
             <div class="card-header text-black-50">
               <span
                 class="badge rounded-pill bg-primary mr-1"
@@ -125,71 +126,127 @@
           </div>
         </div>
 
+        <div v-for="(comment, index) in comments" v-bind:key="index">
+          <!-- {{ JSON.stringify(comment) }} -->
+          <div v-if="comment.type == 0" class="d-flex mt-4">
+            <div class="card ml-3" style="align-items: stretch; width: 100%">
+              <div class="card-header text-black-50 comment-text">
+                <b class="text-dark">{{
+                  $parent.getUsername(comment.created_by_id) || "ghost"
+                }}</b>
+                commented
+                <timeago
+                  :datetime="comment.created_at"
+                  :auto-update="60"
+                  :includeSeconds="true"
+                />
+              </div>
+              <div class="card-body">{{ comment.content }}</div>
+            </div>
+          </div>
+          <div v-else-if="comment.type == 1" class="d-flex ml-5 mt-4">
+            <svg-icon
+              width="40"
+              height="40"
+              type="mdi"
+              :style="{ color: statusBackground[comment.issue_marked] }"
+              :path="statusIcon[comment.issue_marked]"
+              class="ml-4 mr-2"
+            />
+            <div
+              class="align-self-middle ml-2 d-flex"
+              style="align-items: stretch; width: 100%"
+            >
+              <div class="text-dark my-auto comment-text">
+                Issue marked
+                <b>{{ statusText[comment.type] }}</b>
+                <timeago
+                  :datetime="comment.created_at"
+                  :auto-update="60"
+                  :includeSeconds="true"
+                />
+                by
+                <b>{{
+                  $parent.getUsername(comment.created_by_id) || "ghost"
+                }}</b>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="comment.type == 2" class="d-flex ml-5 mt-4">
+            <svg-icon
+              width="40"
+              height="40"
+              type="mdi"
+              :path="comment.comments_opened ? mdiLockOpenVariant : mdiLock"
+              class="ml-4 mr-2 text-dark"
+            />
+            <div
+              class="align-self-middle ml-2 d-flex"
+              style="align-items: stretch; width: 100%"
+            >
+              <div class="text-dark my-auto comment-text">
+                Comments were
+                <b>{{ comment.comments_opened ? "" : "un" }}locked</b>
+                <timeago
+                  :datetime="comment.created_at"
+                  :auto-update="60"
+                  :includeSeconds="true"
+                />
+                by
+                <b>{{
+                  $parent.getUsername(comment.created_by_id) || "ghost"
+                }}</b>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div
-          class="d-flex mt-4"
-          v-for="(comment, index) in comments"
-          v-bind:key="index"
+          class="btn btn-light border border-muted mx-auto my-4 px-5"
+          v-if="!comments_end"
+          @click="
+            comments_page++;
+            fetchComments(comments_page);
+          "
         >
-          <pre>{{ JSON.stringify(comment) }}</pre>
-          <!-- <img
-            width="40"
-            height="40"
-            src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png"
-          />
-          <div class="card ml-3" style="align-items: stretch; width: 100%">
-            <div class="card-header text-black-50">
-              <b class="text-dark">ImRock</b> commented 3 days ago
-            </div>
-            <div class="card-body">This is a message</div>
-          </div> -->
+          Load more comments
         </div>
-
-        <!-- <div class="d-flex mt-4">
-          <img
-            width="40"
-            height="40"
-            src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png"
-          />
-          <div class="card ml-3" style="align-items: stretch; width: 100%">
-            <div class="card-header text-black-50">
-              <b class="text-dark">ImRock</b> commented 3 days ago
-            </div>
-            <div class="card-body">This is a message</div>
-          </div>
-        </div>
-
-        <div class="d-flex ml-5 mt-4">
-          <svg-icon
-            width="40"
-            height="40"
-            type="mdi"
-            :path="mdiTrayRemove"
-            class="ml-4 mr-2"
-          />
-          <div
-            class="align-self-middle ml-2 d-flex"
-            style="align-items: stretch; width: 100%"
-          >
-            <div class="text-dark my-auto">
-              Issue marked <b>invalid</b> 3 days ago by <b>ImRock</b>
-            </div>
-          </div>
-        </div>
-
-        <div class="d-flex mt-4">
-          <img
-            width="40"
-            height="40"
-            src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png"
-          />
-          <div class="card ml-3" style="align-items: stretch; width: 100%">
-            <div class="card-header text-black-50">
-              <b class="text-dark">ImRock</b> commented 3 days ago
-            </div>
-            <div class="card-body">This is a message</div>
-          </div>
-        </div> -->
       </div>
+
+      <!-- 
+      <div class="d-flex ml-5 mt-4">
+        <svg-icon
+          width="40"
+          height="40"
+          type="mdi"
+          :path="mdiTrayRemove"
+          class="ml-4 mr-2"
+        />
+        <div
+          class="align-self-middle ml-2 d-flex"
+          style="align-items: stretch; width: 100%"
+        >
+          <div class="text-dark my-auto">
+            Issue marked <b>invalid</b> 3 days ago by <b>ImRock</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex mt-4">
+        <img
+          width="40"
+          height="40"
+          src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png"
+        />
+        <div class="card ml-3" style="align-items: stretch; width: 100%">
+          <div class="card-header text-black-50">
+            <b class="text-dark">ImRock</b> commented 3 days ago
+          </div>
+          <div class="card-body">This is a message</div>
+        </div>
+      </div>
+      -->
+
       <div class="p-4">
         <form-input
           v-model="comment"
@@ -217,14 +274,16 @@ import axios from "axios";
 import qs from "qs";
 import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
-import { mdiChevronLeft } from "@mdi/js";
 import JSONBig from "json-bigint";
 import {
+  mdiChevronLeft,
   mdiAlertCircle,
   mdiTray,
   mdiTrayFull,
   mdiTrayAlert,
   mdiTrayRemove,
+  mdiLock,
+  mdiLockOpenVariant,
 } from "@mdi/js";
 var jsonBig = JSONBig({ storeAsString: true });
 
@@ -261,12 +320,14 @@ export default {
 
       comment: "",
       comments: [],
+      comments_page: 0,
+      comments_end: false,
 
       statusIcon: {
-        0: mdiTray,
-        1: mdiTrayFull,
-        2: mdiTrayAlert,
-        3: mdiTrayRemove,
+        0: mdiTrayFull,
+        1: mdiTrayAlert,
+        2: mdiTrayRemove,
+        3: mdiTray,
       },
       statusText: {
         0: "Active",
@@ -287,6 +348,8 @@ export default {
       mdiTrayFull: mdiTrayFull,
       mdiTrayAlert: mdiTrayAlert,
       mdiTrayRemove: mdiTrayRemove,
+      mdiLock: mdiLock,
+      mdiLockOpenVariant: mdiLockOpenVariant,
     };
   },
   beforeRouteEnter(to, from, next) {
@@ -322,7 +385,80 @@ export default {
     next();
   },
   methods: {
-    fetchIssue() {},
+    fetchComments(page) {
+      axios
+        .get(
+          "/api/project/" +
+            this.$route.params.id +
+            "/issue/" +
+            this.$route.params.issueid +
+            "/comments?page=" +
+            page,
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            var userQuery = [];
+            this.comments_page = data.data.page;
+            data.data.comments.forEach((comment) => {
+              this.comments.push(comment);
+              if (
+                comment.created_by_id != 0 &&
+                !(comment.created_by_id in this.$parent.contributors) &&
+                !userQuery.includes(comment.created_by_id)
+              ) {
+                userQuery.push(comment.created_by_id);
+              }
+            });
+
+            if (data.data.end) {
+              this.comments_end = true;
+            }
+            this.lazyLoad(userQuery);
+          }
+        });
+    },
+    lazyLoad(userQuery) {
+      if (userQuery.length > 0) {
+        // fetch users
+        axios
+          .get("/api/project/" + this.$route.params.id + "/lazy", {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            params: {
+              q: qs.stringify(userQuery),
+            },
+          })
+          .then((result) => {
+            var data = result.data;
+            if (data.success) {
+              Object.values(data.data.users).forEach((user) => {
+                // We will use $set as this overcomes a Vue limitation
+                // where adding new properties to an object will not
+                // trigger changes.
+                this.$set(this.$parent.contributors, user.id, user);
+              });
+            } else {
+              this.issue_error = data.error;
+            }
+          })
+          .catch((error) => {
+            if (error.response?.data) {
+              this.issue_error =
+                error.response.data.error || error.response.data;
+            } else {
+              this.issue_error = error.text || error.toString();
+            }
+          })
+          .finally(() => {
+            this.$parent.contributors_loaded = true;
+          });
+      } else {
+        this.$parent.contributors_loaded = true;
+      }
+    },
     setData(err, response) {
       if (err && err != response) {
         this.issue_error = err.toString();
@@ -331,6 +467,24 @@ export default {
         this.issue = response.issue;
       }
       this.issue_loading = false;
+      this.fetchComments(0);
+
+      var userQuery = [];
+      if (
+        response.issue.created_by_id != 0 &&
+        !(response.issue.created_by_id in this.$parent.contributors) &&
+        !userQuery.includes(response.issue.created_by_id)
+      ) {
+        userQuery.push(response.issue.created_by_id);
+      }
+      if (
+        response.issue.assignee_id != 0 &&
+        !(response.issue.assignee_id in this.$parent.contributors) &&
+        !userQuery.includes(response.issue.assignee_id)
+      ) {
+        userQuery.push(response.issue.assignee_id);
+      }
+      this.lazyLoad(userQuery);
     },
     validRequest() {
       if (this.comment.trim() == "") {
@@ -374,6 +528,9 @@ export default {
 </script>
 
 <style scoped>
+.comment-text > * {
+  padding: 0 2px;
+}
 .circle {
   min-width: 40px;
   max-width: 40px;

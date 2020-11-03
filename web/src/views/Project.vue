@@ -467,7 +467,7 @@ export default {
   padding: 3px 8px;
 }
 .banner-image {
-  background-image: url(/img/banner.png);
+  background-image: url(/img/banner.jpg);
   background-color: rgba(0, 0, 0, 0.8);
   background-repeat: no-repeat;
   background-size: cover;
