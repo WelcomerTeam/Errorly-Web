@@ -1490,8 +1490,13 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 			Content:     content,
 		}
 
-		println("content", comment.Content)
+		_, err = er.Postgres.Model(comment).Insert()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
 
+		passResponse(rw, comment, true, http.StatusOK)
 	}
 }
 

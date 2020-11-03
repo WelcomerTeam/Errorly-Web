@@ -130,7 +130,7 @@
           v-for="(comment, index) in comments"
           v-bind:key="index"
         >
-          <pre>{{ comment }}</pre>
+          <pre>{{ JSON.stringify(comment) }}</pre>
           <!-- <img
             width="40"
             height="40"
@@ -356,7 +356,7 @@ export default {
         .then((result) => {
           var data = result.data;
           if (data.success) {
-            this.comments.push(data.data.comment);
+            this.comments.push(data.data);
           } else {
             this.issue_error = data.error;
           }
