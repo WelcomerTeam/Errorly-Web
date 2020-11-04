@@ -669,7 +669,8 @@ func APIProjectHandler(er *Errorly) http.HandlerFunc {
 		// }
 
 		passResponse(rw, structs.APIProject{
-			Project: project,
+			Project:  project,
+			Elevated: elevated,
 			// Contributors: contributors,
 		}, true, http.StatusOK)
 	}

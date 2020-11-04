@@ -175,6 +175,7 @@ export default {
       contributors: {},
       contributors_loaded: false,
 
+      elevated: false,
       executing: false,
 
       issue_error: undefined,
@@ -449,6 +450,7 @@ export default {
       } else {
         this.error = undefined;
         this.project = response.project;
+        this.elevated = response.elevated;
         this.contributors = response.contributors || {};
 
         // this.issues = response.issues.map(issue => {

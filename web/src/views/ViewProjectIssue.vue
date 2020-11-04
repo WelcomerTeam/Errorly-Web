@@ -1,5 +1,5 @@
 <template>
-  <div class="container mt-2 p-4">
+  <div>
     <a
       class="text-dark mb-2 text-decoration-none h6 d-flex"
       @click="$router.go(-1)"

@@ -73,6 +73,7 @@ type PartialUser struct {
 // APIProject is the structure of the GET /api/project/{id} endpoint
 type APIProject struct {
 	Project      *Project              `json:"project"`
+	Elevated     bool                  `json:"elevated"`
 	Contributors map[int64]PartialUser `json:"contributors"`
 }
 

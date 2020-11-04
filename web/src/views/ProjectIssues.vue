@@ -276,7 +276,7 @@
               <button
                 class="btn btn-outline-secondary btn-sm"
                 aria-label="Execute actions"
-                @click="execute()"
+                @click="execute(marked, $parent.getCheckedIssues())"
                 :disabled="
                   marked == 'none' ||
                   ((marked == 'assign' || marked == 'deassign') && !assigned) ||
@@ -627,42 +627,42 @@ export default {
     });
   },
   methods: {
-    execute() {
+    execute(marked, issues) {
       var query = {
-        issues: qs.stringify(this.$parent.getCheckedIssues()),
+        issues: qs.stringify(issues),
       };
 
-      if (this.marked == "assign") {
+      if (marked == "assign") {
         query["action"] = "assign";
         query["assigning"] = true;
         query["assignee_id"] = this.assigned;
       }
-      if (this.marked == "deassign") {
+      if (marked == "deassign") {
         query["action"] = "assign";
         query["assigning"] = false;
         query["assignee_id"] = this.assigned;
       }
-      if (this.marked == "resolved") {
+      if (marked == "resolved") {
         query["action"] = "mark_status";
         query["mark_type"] = "EntryResolved";
       }
-      if (this.marked == "active") {
+      if (marked == "active") {
         query["action"] = "mark_status";
         query["mark_type"] = "EntryActive";
       }
-      if (this.marked == "open") {
+      if (marked == "open") {
         query["action"] = "mark_status";
         query["mark_type"] = "EntryOpen";
       }
-      if (this.marked == "invalid") {
+      if (marked == "invalid") {
         query["action"] = "mark_status";
         query["mark_type"] = "EntryInvalid";
       }
-      if (this.marked == "lock") {
+      if (marked == "lock") {
         query["action"] = "lock_comments";
         query["locking"] = true;
       }
-      if (this.marked == "unlock") {
+      if (marked == "unlock") {
         query["action"] = "lock_comments";
         query["locking"] = false;
       }
