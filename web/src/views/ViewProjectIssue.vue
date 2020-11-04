@@ -27,6 +27,21 @@
     <div v-else>
       <div class="p-4 border-bottom border-muted">
         <h2 class="display-6 d-flex flex-wrap">
+          <h5 class="my-auto mr-1">
+            <span
+              class="badge rounded-pill"
+              :style="{ background: statusBackground[issue.type] }"
+              aria-label="Error type"
+            >
+              <svg-icon
+                type="mdi"
+                width="20"
+                height="20"
+                :path="statusIcon[issue.type]"
+              />
+              {{ statusText[issue.type] }}
+            </span>
+          </h5>
           <span class="mr-2">{{ issue.error }}</span>
           <span
             class="text-muted mr-2 h4 font-weight-normal my-auto"
@@ -39,75 +54,62 @@
             >{{ issue.checkpoint }}</span
           >
         </h2>
-        <span
-          class="badge rounded-pill"
-          :style="{ background: statusBackground[issue.type] }"
-          aria-label="Error type"
-        >
-          <svg-icon
-            type="mdi"
-            width="20"
-            height="20"
-            :path="statusIcon[issue.type]"
-          />
-          {{ statusText[issue.type] }}
-        </span>
-        <span class="dot-right pl-2">
-          <span class="pl-1">
+        <span class="dot-right">
+          <span class="text-muted">
+            <span class="text-body">{{
+              $parent.getUsername(issue.created_by_id) || "ghost"
+            }}</span>
             <span
-              class="badge rounded-pill bg-primary mr-1"
+              class="badge rounded-pill bg-primary ml-1"
               v-if="$parent.getIntegration(issue.created_by_id)"
               >Integration</span
             >
-            <b>{{ $parent.getUsername(issue.created_by_id) || "ghost" }}</b>
             opened this issue
-            <b>
-              <timeago
-                :datetime="issue.created_at"
-                :auto-update="60"
-                :includeSeconds="true"
-              />
-            </b>
+            <timeago
+              :datetime="issue.created_at"
+              :auto-update="60"
+              :includeSeconds="true"
+            />
           </span>
-          <span class="pl-1">
+          <span class="pl-1 text-muted">
             Last modified
-            <b>
-              <timeago
-                :datetime="issue.last_modified"
-                :auto-update="60"
-                :includeSeconds="true"
-              />
-            </b>
+            <timeago
+              class="text-body"
+              :datetime="issue.last_modified"
+              :auto-update="60"
+              :includeSeconds="true"
+            />
           </span>
-          <span class="pl-1">
-            <b>{{ issue.occurrences }}</b>
-            Occurrences
+          <span class="pl-1 text-muted">
+            <span class="text-body">{{ issue.occurrences }}</span>
+            occurrences
           </span>
-          <span class="pl-1">
+          <span class="pl-1 text-muted">
             Assigned to
-            <b>{{ $parent.getUsername(issue.assignee_id) || "ghost" }}</b>
+            <span class="text-body">
+              {{ $parent.getUsername(issue.assignee_id) || "ghost" }}
+            </span>
           </span>
         </span>
       </div>
 
       <div class="p-4 border-bottom border-muted d-flex flex-column">
         <div class="d-flex mt-4">
-          <!-- <img
+          <img
             width="40"
             height="40"
-            src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png"
-          /> -->
-          <!-- ml-3 -->
-          <div class="card" style="align-items: stretch; width: 100%">
+            :src="$parent.getAvatar(issue.created_by_id)"
+          />
+          <div class="card ml-3" style="align-items: stretch; width: 100%">
             <div class="card-header text-black-50">
-              <span
-                class="badge rounded-pill bg-primary mr-1"
-                v-if="$parent.getIntegration(issue.created_by_id)"
-                >Integration</span
-              >
               <b class="text-dark">{{
                 $parent.getUsername(issue.created_by_id) || "ghost"
               }}</b>
+              <span
+                class="badge rounded-pill bg-primary ml-1"
+                v-if="$parent.getIntegration(issue.created_by_id)"
+                >Integration</span
+              >
               created this issue
               <timeago
                 :datetime="issue.created_at"
@@ -127,8 +129,12 @@
         </div>
 
         <div v-for="(comment, index) in comments" v-bind:key="index">
-          <!-- {{ JSON.stringify(comment) }} -->
           <div v-if="comment.type == 0" class="d-flex mt-4">
+            <img
+              width="40"
+              height="40"
+              :src="$parent.getAvatar(comment.created_by_id)"
+            />
             <div class="card ml-3" style="align-items: stretch; width: 100%">
               <div class="card-header text-black-50 comment-text">
                 <b class="text-dark">{{
@@ -141,13 +147,15 @@
                   :includeSeconds="true"
                 />
               </div>
-              <div class="card-body">{{ comment.content }}</div>
+              <div class="card-body" style="white-space: pre-wrap">
+                {{ comment.content }}
+              </div>
             </div>
           </div>
           <div v-else-if="comment.type == 1" class="d-flex ml-5 mt-4">
             <svg-icon
-              width="40"
-              height="40"
+              width="30"
+              height="30"
               type="mdi"
               :style="{ color: statusBackground[comment.issue_marked] }"
               :path="statusIcon[comment.issue_marked]"
@@ -159,7 +167,7 @@
             >
               <div class="text-dark my-auto comment-text">
                 Issue marked
-                <b>{{ statusText[comment.type] }}</b>
+                <b>{{ statusText[comment.issue_marked] }}</b>
                 <timeago
                   :datetime="comment.created_at"
                   :auto-update="60"
@@ -174,8 +182,8 @@
           </div>
           <div v-else-if="comment.type == 2" class="d-flex ml-5 mt-4">
             <svg-icon
-              width="40"
-              height="40"
+              width="30"
+              height="30"
               type="mdi"
               :path="comment.comments_opened ? mdiLockOpenVariant : mdiLock"
               class="ml-4 mr-2 text-dark"
@@ -404,6 +412,7 @@ export default {
             var userQuery = [];
             this.comments_page = data.data.page;
             data.data.comments.forEach((comment) => {
+              comment.issue_marked = comment.issue_marked | 0;
               this.comments.push(comment);
               if (
                 comment.created_by_id != 0 &&

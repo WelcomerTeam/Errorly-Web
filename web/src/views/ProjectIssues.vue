@@ -373,12 +373,12 @@
                     :includeSeconds="true"
                   />
                   by
+                  {{ $parent.getUsername(issue.created_by_id) || "ghost" }}
                   <span
                     class="badge rounded-pill bg-primary"
                     v-if="$parent.getIntegration(issue.created_by_id)"
                     >Integration</span
                   >
-                  {{ $parent.getUsername(issue.created_by_id) || "ghost" }}
                 </span>
                 <svg-icon
                   type="mdi"

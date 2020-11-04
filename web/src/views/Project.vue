@@ -436,6 +436,13 @@ export default {
     getIntegration(id) {
       return this.contributors[id] ? this.contributors[id].integration : false;
     },
+    getAvatar(id) {
+      return this.getIntegration(id)
+        ? "/img/integration.png"
+        : this.contributors[id]
+        ? this.contributors[id].avatar
+        : "/img/default.png";
+    },
     setData(err, response) {
       if (err && err != response) {
         this.error = err.toString();
