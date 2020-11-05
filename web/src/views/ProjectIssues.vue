@@ -67,12 +67,17 @@
         </button>
       </div>
       <router-link
-        v-if="!this.$parent.project.settings.archived"
+        v-if="!this.$parent.project.settings.archived && this.$parent.elevated"
         :to="'/project/' + this.$route.params.id + '/issue/create'"
         class="ml-3"
       >
         <button class="btn btn-success" type="button">New Issue</button>
       </router-link>
+      <div class="ml-3" v-else>
+        <button class="btn btn-success" type="button" :disabled="true">
+          New Issue
+        </button>
+      </div>
     </div>
     <div class="table-responsive">
       <div class="text-center my-5" v-if="$parent.issue_error">
@@ -114,209 +119,220 @@
                 />
               </th>
               <th colspan="6" scope="col" class="settings col-6 align-middle">
-                <div class="btn-group dropright">
-                  <button
-                    class="btn btn-secondary btn-sm dropdown-toggle"
-                    type="button"
-                    data-toggle="dropdown"
-                    aria-expanded="false"
-                    aria-label="Modify issue"
-                  >
-                    <svg-icon
-                      type="mdi"
-                      :height="16"
-                      :path="icons[this.marked]"
-                    />
-                    {{ text[this.marked] }}
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'none'"
-                      >
-                        <svg-icon
-                          type="mdi"
-                          :height="16"
-                          :path="mdiDotsHorizontal"
-                        />
-                        Select Action</a
-                      >
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'assign'"
-                      >
-                        <svg-icon
-                          type="mdi"
-                          :height="16"
-                          :path="mdiAccountPlus"
-                        />
-                        Assign user</a
-                      >
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'deassign'"
-                      >
-                        <svg-icon
-                          type="mdi"
-                          :height="16"
-                          :path="mdiAccountRemove"
-                        />
-                        Deassign user</a
-                      >
-                    </li>
-                    <li>
-                      <hr class="dropdown-divider" />
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'resolved'"
-                      >
-                        <svg-icon type="mdi" :height="16" :path="mdiTray" />
-                        Mark Resolved</a
-                      >
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'active'"
-                      >
-                        <svg-icon type="mdi" :height="16" :path="mdiTrayFull" />
-                        Mark Active</a
-                      >
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'open'"
-                      >
-                        <svg-icon
-                          type="mdi"
-                          :height="16"
-                          :path="mdiTrayAlert"
-                        />
-                        Mark Open</a
-                      >
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'invalid'"
-                      >
-                        <svg-icon
-                          type="mdi"
-                          :height="16"
-                          :path="mdiTrayRemove"
-                        />
-                        Mark Invalid</a
-                      >
-                    </li>
-                    <li>
-                      <hr class="dropdown-divider" />
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'lock'"
-                      >
-                        <svg-icon type="mdi" :height="16" :path="mdiLock" />
-                        Lock Comments</a
-                      >
-                    </li>
-                    <li>
-                      <a
-                        class="dropdown-item"
-                        v-on:click.prevent="marked = 'unlock'"
-                      >
-                        <svg-icon
-                          type="mdi"
-                          :height="16"
-                          :path="mdiLockOpenVariant"
-                        />
-                        Unlock Comments</a
-                      >
-                    </li>
-                  </ul>
-                </div>
                 <div
-                  class="btn-group dropright"
-                  v-if="marked == 'assign' || marked == 'deassign'"
-                >
-                  <button
-                    class="btn btn-secondary btn-sm dropdown-toggle"
-                    type="button"
-                    data-toggle="dropdown"
-                    aria-expanded="false"
-                    aria-label="Select user to assign/deassign"
-                  >
-                    {{ $parent.getUsername(this.assigned) || "Nobody" }}
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li>
-                      <a
-                        class="dropdown-item user-select"
-                        v-on:click.prevent="assigned = undefined"
-                        >Nobody</a
-                      >
-                    </li>
-                    <li>
-                      <input
-                        class="m-2"
-                        type="text"
-                        placeholder="Filter users..."
-                        v-model="assigneeFilter"
-                      />
-                    </li>
-                    <li><hr class="dropdown-divider" /></li>
-                    <li v-for="user in filterAssignee()" v-bind:key="user.id">
-                      <a
-                        class="dropdown-item user-select"
-                        v-on:click.prevent="assigned = user.id"
-                        v-if="!user.integration"
-                      >
-                        <img
-                          v-if="user.avatar"
-                          :width="24"
-                          :height="24"
-                          :src="user.avatar"
-                          alt="User profile picture"
-                        />
-                        {{ user.name }}
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-                <button
-                  class="btn btn-outline-secondary btn-sm"
-                  aria-label="Execute actions"
-                  @click="$parent.execute(marked, $parent.getCheckedIssues())"
-                  :disabled="
-                    marked == 'none' ||
-                    ((marked == 'assign' || marked == 'deassign') &&
-                      !assigned) ||
-                    $parent.getCheckedIssues().length == 0
+                  v-if="
+                    !this.$parent.project.settings.archived &&
+                    this.$parent.elevated
                   "
                 >
-                  <div
-                    v-if="$parent.executing"
-                    style="width: 0.6rem; height: 0.6rem; vertical-align: sub"
-                    class="spinner-border"
-                    role="status"
-                  >
-                    <span class="visually-hidden">Loading...</span>
+                  <div class="btn-group dropright">
+                    <button
+                      class="btn btn-secondary btn-sm dropdown-toggle"
+                      type="button"
+                      data-toggle="dropdown"
+                      aria-expanded="false"
+                      aria-label="Modify issue"
+                    >
+                      <svg-icon
+                        type="mdi"
+                        :height="16"
+                        :path="icons[this.marked]"
+                      />
+                      {{ text[this.marked] }}
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'none'"
+                        >
+                          <svg-icon
+                            type="mdi"
+                            :height="16"
+                            :path="mdiDotsHorizontal"
+                          />
+                          Select Action</a
+                        >
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'assign'"
+                        >
+                          <svg-icon
+                            type="mdi"
+                            :height="16"
+                            :path="mdiAccountPlus"
+                          />
+                          Assign user</a
+                        >
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'deassign'"
+                        >
+                          <svg-icon
+                            type="mdi"
+                            :height="16"
+                            :path="mdiAccountRemove"
+                          />
+                          Deassign user</a
+                        >
+                      </li>
+                      <li>
+                        <hr class="dropdown-divider" />
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'resolved'"
+                        >
+                          <svg-icon type="mdi" :height="16" :path="mdiTray" />
+                          Mark Resolved</a
+                        >
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'active'"
+                        >
+                          <svg-icon
+                            type="mdi"
+                            :height="16"
+                            :path="mdiTrayFull"
+                          />
+                          Mark Active</a
+                        >
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'open'"
+                        >
+                          <svg-icon
+                            type="mdi"
+                            :height="16"
+                            :path="mdiTrayAlert"
+                          />
+                          Mark Open</a
+                        >
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'invalid'"
+                        >
+                          <svg-icon
+                            type="mdi"
+                            :height="16"
+                            :path="mdiTrayRemove"
+                          />
+                          Mark Invalid</a
+                        >
+                      </li>
+                      <li>
+                        <hr class="dropdown-divider" />
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'lock'"
+                        >
+                          <svg-icon type="mdi" :height="16" :path="mdiLock" />
+                          Lock Comments</a
+                        >
+                      </li>
+                      <li>
+                        <a
+                          class="dropdown-item"
+                          v-on:click.prevent="marked = 'unlock'"
+                        >
+                          <svg-icon
+                            type="mdi"
+                            :height="16"
+                            :path="mdiLockOpenVariant"
+                          />
+                          Unlock Comments</a
+                        >
+                      </li>
+                    </ul>
                   </div>
-                  <svg-icon
-                    v-else
-                    type="mdi"
-                    style="width: 1rem; height: 1rem; vertical-align: sub"
-                    :path="mdiPlay"
-                  />
-                </button>
+                  <div
+                    class="btn-group dropright"
+                    v-if="marked == 'assign' || marked == 'deassign'"
+                  >
+                    <button
+                      class="btn btn-secondary btn-sm dropdown-toggle"
+                      type="button"
+                      data-toggle="dropdown"
+                      aria-expanded="false"
+                      aria-label="Select user to assign/deassign"
+                    >
+                      {{ $parent.getUsername(this.assigned) || "Nobody" }}
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a
+                          class="dropdown-item user-select"
+                          v-on:click.prevent="assigned = undefined"
+                          >Nobody</a
+                        >
+                      </li>
+                      <li>
+                        <input
+                          class="m-2"
+                          type="text"
+                          placeholder="Filter users..."
+                          v-model="assigneeFilter"
+                        />
+                      </li>
+                      <li><hr class="dropdown-divider" /></li>
+                      <li v-for="user in filterAssignee()" v-bind:key="user.id">
+                        <a
+                          class="dropdown-item user-select"
+                          v-on:click.prevent="assigned = user.id"
+                          v-if="!user.integration"
+                        >
+                          <img
+                            v-if="user.avatar"
+                            :width="24"
+                            :height="24"
+                            :src="user.avatar"
+                            alt="User profile picture"
+                          />
+                          {{ user.name }}
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    aria-label="Execute actions"
+                    @click="$parent.execute(marked, $parent.getCheckedIssues())"
+                    :disabled="
+                      marked == 'none' ||
+                      ((marked == 'assign' || marked == 'deassign') &&
+                        !assigned) ||
+                      $parent.getCheckedIssues().length == 0
+                    "
+                  >
+                    <div
+                      v-if="$parent.executing"
+                      style="width: 0.6rem; height: 0.6rem; vertical-align: sub"
+                      class="spinner-border"
+                      role="status"
+                    >
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <svg-icon
+                      v-else
+                      type="mdi"
+                      style="width: 1rem; height: 1rem; vertical-align: sub"
+                      :path="mdiPlay"
+                    />
+                  </button>
+                </div>
               </th>
               <th colspan="1" scope="col" class="text-center align-middle">
                 Status
@@ -355,7 +371,11 @@
                 <button
                   class="btn text-dark"
                   style="padding: 0"
-                  @click="$parent.starIssue(issue.id, !issue.starred)"
+                  @click="
+                    $parent.elevated
+                      ? $parent.starIssue(issue.id, !issue.starred)
+                      : 0
+                  "
                   aria-label="Star issue"
                 >
                   <svg-icon

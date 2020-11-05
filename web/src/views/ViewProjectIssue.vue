@@ -276,7 +276,9 @@
 
       <div class="p-4">
         <div v-if="!$root.userAuthenticated">
-          <div class="border border-muted rounded-sm py-5 text-muted text-center bg-muted card-header mb-2">
+          <div
+            class="border border-muted rounded-sm py-5 text-muted text-center bg-muted card-header mb-2"
+          >
             You must be logged in to comment
           </div>
           <button
@@ -300,7 +302,11 @@
               v-if="$parent.elevated || !$parent.project.settings.limited"
               type="button"
               class="btn btn-success mr-2"
-              :disabled="$parent.project.settings.archived || $parent.issues[issue_id].comments_locked || !validRequest()"
+              :disabled="
+                $parent.project.settings.archived ||
+                $parent.issues[issue_id].comments_locked ||
+                !validRequest()
+              "
               @click="sendComment(comment)"
             >
               Comment
@@ -327,7 +333,11 @@
               <ul class="dropdown-menu">
                 <li>
                   <a class="dropdown-item" v-on:click.prevent="marked = 'none'">
-                    <svg-icon type="mdi" :height="16" :path="mdiDotsHorizontal" />
+                    <svg-icon
+                      type="mdi"
+                      :height="16"
+                      :path="mdiDotsHorizontal"
+                    />
                     Select Action</a
                   >
                 </li>
@@ -344,7 +354,10 @@
                   >
                 </li>
                 <li>
-                  <a class="dropdown-item" v-on:click.prevent="marked = 'active'">
+                  <a
+                    class="dropdown-item"
+                    v-on:click.prevent="marked = 'active'"
+                  >
                     <svg-icon type="mdi" :height="16" :path="mdiTrayFull" />
                     Mark Active</a
                   >
@@ -374,7 +387,10 @@
                   >
                 </li>
                 <li>
-                  <a class="dropdown-item" v-on:click.prevent="marked = 'unlock'">
+                  <a
+                    class="dropdown-item"
+                    v-on:click.prevent="marked = 'unlock'"
+                  >
                     <svg-icon
                       type="mdi"
                       :height="16"
