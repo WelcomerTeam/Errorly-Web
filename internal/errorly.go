@@ -79,8 +79,20 @@ type Errorly struct {
 	fs          *fasthttp.FS
 }
 
+type dbLogger struct{}
+
+func (d dbLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Context, error) {
+	return c, nil
+}
+
+func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
+	a, _ := q.FormattedQuery()
+	println(string(a))
+	return nil
+}
+
 // NewErrorly creates an Errorly instance.
-func NewErrorly(logger io.Writer) (er *Errorly, err error) {
+func NewErrorly(logger io.Writer, level zerolog.Level) (er *Errorly, err error) {
 
 	_ = pg.Options{}
 
@@ -129,7 +141,7 @@ func NewErrorly(logger io.Writer) (er *Errorly, err error) {
 		}
 	}
 	mw := io.MultiWriter(writers...)
-	er.Logger = zerolog.New(mw).With().Timestamp().Logger()
+	er.Logger = zerolog.New(mw).With().Timestamp().Logger().Level(level)
 	er.Logger.Info().Msg("Logging configured")
 
 	er.fs = &fasthttp.FS{
@@ -193,6 +205,9 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 
 	fasthttp.CompressHandlerBrotliLevel(func(ctx *fasthttp.RequestCtx) {
 		fasthttpadaptor.NewFastHTTPHandler(er.Router)(ctx)
+		if ctx.Response.StatusCode() != 404 {
+			ctx.SetContentType("application/json;charset=utf8")
+		}
 		// If there is no URL in router then try serving from the dist
 		// folder.
 		if ctx.Response.StatusCode() == 404 {
@@ -226,6 +241,11 @@ func (er *Errorly) Open() (err error) {
 	}
 
 	er.Postgres = pg.Connect(er.Configuration.Postgres)
+
+	if er.Logger.GetLevel() <= 0 {
+		er.Postgres.AddQueryHook(dbLogger{})
+	}
+
 	er.PostgressConn = er.Postgres.Conn()
 	defer er.PostgressConn.Close()
 	defer er.Postgres.Close()

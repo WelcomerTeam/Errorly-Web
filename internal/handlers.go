@@ -130,18 +130,20 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 	// sort:created_by-desc
 	_issues := make([]structs.IssueEntry, 0, limit)
 
-	initialQuery := er.Postgres.Model(&_issues).Where("issue_entry.project_id = ?", projectID)
+	initialQuery := er.Postgres.Model(&_issues).Where("issue_entry.project_id = ?", projectID).Order("starred DESC")
 
+	parts := []string{}
 	query = strings.ReplaceAll(query, `'`, `"`)
-	r := csv.NewReader(strings.NewReader(query))
-	r.Comma = ' '
-
-	parts, err := r.Read()
-	if err != nil {
-		return
+	if len(query) > 0 {
+		r := csv.NewReader(strings.NewReader(query))
+		r.Comma = ' '
+		parts, err = r.Read()
+		if err != nil {
+			return
+		}
 	}
 
-	fetchStarred := false
+	// fetchStarred := false
 	fuzzyEntries := make([]string, 0)
 	for _, part := range parts {
 		subpart := strings.Split(part, ":")
@@ -165,7 +167,8 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 			case "is":
 				switch strings.ToLower(thumb) {
 				case "active":
-					initialQuery = initialQuery.Where("type = ?", structs.EntryActive)
+					// initialQuery = initialQuery.Where("type = ?", structs.EntryActive)
+					initialQuery = initialQuery.Where("type is NULL", structs.EntryActive)
 				case "open":
 					initialQuery = initialQuery.Where("type = ?", structs.EntryOpen)
 				case "invalid":
@@ -173,7 +176,8 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 				case "resolved":
 					initialQuery = initialQuery.Where("type = ?", structs.EntryResolved)
 				case "starred":
-					fetchStarred = true
+					initialQuery = initialQuery.Where("starred = ?", true)
+					// fetchStarred = true
 				}
 			case "author":
 			case "from":
@@ -232,75 +236,80 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 	// get starres and page
 	// get total issues
 
-	totalissues = 0
-	issues = make([]structs.IssueEntry, 0, limit)
+	// issues = make([]structs.IssueEntry, 0, limit)
 
-	// Fetch issues
-	count, err := initialQuery.Clone().Limit(limit).Where("starred = ?", true).Offset(int(math.Max(0, float64(limit*page)))).SelectAndCount()
-	if err != nil {
-		return
-	}
-	totalissues += count
-	if len(fuzzyEntries) > 0 {
-		// for _, issue := range _issues {
-		// 	for _, fuzz := range fuzzyEntries {
-		// 		if fuzzy.Match(fuzz, issue.Error) {
-		// 			issues = append(issues, issue)
-		// 			break
-		// 		}
-		// 		if fuzzy.Match(fuzz, issue.Description) {
-		// 			issues = append(issues, issue)
-		// 			break
-		// 		}
-		// 	}
-		// }
-		issues = append(issues, _issues...)
-	} else {
-		issues = append(issues, _issues...)
-	}
+	// // Fetch issues
+	// count, err := initialQuery.Clone().Limit(limit).Where("starred = ?", true).Offset(int(math.Max(0, float64(limit*page)))).SelectAndCount()
+	// if err != nil {
+	// 	return
+	// }
+	// totalissues += count
+	// if len(fuzzyEntries) > 0 {
+	// 	// for _, issue := range _issues {
+	// 	// 	for _, fuzz := range fuzzyEntries {
+	// 	// 		if fuzzy.Match(fuzz, issue.Error) {
+	// 	// 			issues = append(issues, issue)
+	// 	// 			break
+	// 	// 		}
+	// 	// 		if fuzzy.Match(fuzz, issue.Description) {
+	// 	// 			issues = append(issues, issue)
+	// 	// 			break
+	// 	// 		}
+	// 	// 	}
+	// 	// }
+	// 	issues = append(issues, _issues...)
+	// } else {
+	// 	issues = append(issues, _issues...)
+	// }
 
-	if !fetchStarred {
-		// If we are not retrieving stars, we will retrieve any starred issues before normal issues
-		// if there are 15 starred issues, we will retrieve at least 10 regular ones and if there are
-		// 25+ starred issues, we do not retrieve any regular issues.
-		if len(issues) < limit {
-			count, err = initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).SelectAndCount()
-			if err != nil {
-				return
-			}
-			totalissues += count
-			if len(fuzzyEntries) > 0 {
-				// for _, issue := range _issues {
-				// 	for _, fuzz := range fuzzyEntries {
-				// 		if fuzzy.Match(fuzz, issue.Error) {
-				// 			issues = append(issues, issue)
-				// 			break
-				// 		}
-				// 		if fuzzy.Match(fuzz, issue.Description) {
-				// 			issues = append(issues, issue)
-				// 			break
-				// 		}
-				// 	}
-				// }
-				issues = append(issues, _issues...)
-			} else {
-				issues = append(issues, _issues...)
-			}
-		} else {
-			count, err = initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).Count()
-			if err != nil {
-				return
-			}
-			totalissues += count
-		}
-	}
+	// if !fetchStarred {
+	// 	// If we are not retrieving stars, we will retrieve any starred issues before normal issues
+	// 	// if there are 15 starred issues, we will retrieve at least 10 regular ones and if there are
+	// 	// 25+ starred issues, we do not retrieve any regular issues.
+	// 	if len(issues) < limit {
+	// 		count, err = initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).SelectAndCount()
+	// 		if err != nil {
+	// 			return
+	// 		}
+	// 		totalissues += count
+	// 		if len(fuzzyEntries) > 0 {
+	// 			// for _, issue := range _issues {
+	// 			// 	for _, fuzz := range fuzzyEntries {
+	// 			// 		if fuzzy.Match(fuzz, issue.Error) {
+	// 			// 			issues = append(issues, issue)
+	// 			// 			break
+	// 			// 		}
+	// 			// 		if fuzzy.Match(fuzz, issue.Description) {
+	// 			// 			issues = append(issues, issue)
+	// 			// 			break
+	// 			// 		}
+	// 			// 	}
+	// 			// }
+	// 			issues = append(issues, _issues...)
+	// 		} else {
+	// 			issues = append(issues, _issues...)
+	// 		}
+	// 	} else {
+	// 		count, err = initialQuery.Clone().Limit(limit - len(issues)).Where("starred is NULL").Offset(int(math.Max(0, float64((limit*page)-count)))).Count()
+	// 		if err != nil {
+	// 			return
+	// 		}
+	// 		totalissues += count
+	// 	}
+	// }
 
 	// totalissues, err = initialQuery.Limit(limit).Offset(limit * page).SelectAndCount()
 
 	// this is sort:starred-desc sort:type-desc sort:created_at-desc sort:occurrences-desc
 	// totalissues, err = er.Postgres.Model(&issues).Where("issue_entry.project_id = ?", projectID).Relation("CreatedBy").Relation("Assignee").Order("starred DESC").Order("type DESC").Order("created_at DESC").Order("occurrences DESC").Limit(limit).Offset(limit * page).SelectAndCount()
 
-	return
+	// return
+
+	count, err := initialQuery.Limit(limit).Offset(int(math.Max(0, float64(limit*page)))).SelectAndCount()
+	if err != nil {
+		return
+	}
+	return _issues, count, nil
 }
 
 // LogoutHandler handles clearing a user session
@@ -1204,7 +1213,7 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 		// Get query from search
 		query := urlQuery.Get("q")
 		if query == "" {
-			query = "sort:created_by-asc sort:starred-asc"
+			query = ""
 		}
 
 		// We should get a limit argument here but at the moment

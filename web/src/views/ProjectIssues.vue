@@ -604,8 +604,8 @@ export default {
         "Least recently updated": "sort:last_modified-asc",
         "Most occurred": "sort:occurrences-desc",
         "Least occurred": "sort:occurrences-asc",
-        "Error Type": "sort:error",
-        Checkpoint: "sort:checkpoint",
+        "Error Type": "sort:error-asc",
+        Checkpoint: "sort:checkpoint-asc",
       },
 
       statusKey: {

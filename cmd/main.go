@@ -28,9 +28,7 @@ func main() {
 		log.Info().Str("logLevel", level.String()).Msg("Using logging")
 	}
 
-	zerolog.SetGlobalLevel(level)
-
-	errorly, err := errorly.NewErrorly(logger)
+	errorly, err := errorly.NewErrorly(logger, level)
 	if err != nil {
 		log.Panic().Err(err).Msgf("Cannot create errorly: %s", err)
 	}
