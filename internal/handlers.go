@@ -498,6 +498,10 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 			projects[i], projects[j] = projects[j], projects[i]
 		}
 
+		if !auth {
+			user = nil
+		}
+
 		passResponse(rw, structs.APIMe{
 			Authenticated: auth,
 			User:          user,
@@ -596,7 +600,7 @@ func APIProjectCreateHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		user.ProjectIDs = append(user.ProjectIDs, project.ID)
-		_, err = er.Postgres.Model(&user).WherePK().Update()
+		_, err = er.Postgres.Model(user).WherePK().Update()
 		if err != nil {
 			er.Logger.Error().Err(err).Msg("Failed to update user projects")
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
@@ -728,10 +732,12 @@ func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		_contributors := []structs.User{}
-		err := er.Postgres.Model(&_contributors).WhereIn("id = ?", contributorIDs).Select()
-		if err != nil {
-			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
-			return
+		if len(contributorIDs) > 0 {
+			err := er.Postgres.Model(&_contributors).WhereIn("id IN (?)", contributorIDs).Select()
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
 		}
 
 		contributors := make(map[int64]structs.PartialUser)
@@ -948,6 +954,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 			// No permission to execute on project. We will simply tell them
 			// they cannot do this.
 			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+			return
 		}
 
 		unavailable := make([]int64, 0)
@@ -1351,7 +1358,7 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 				CommentsLocked: commentsLocked,
 			}
 
-			_, err = er.Postgres.Model(&issue).Insert()
+			_, err = er.Postgres.Model(issue).Insert()
 			if err != nil {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 				return
@@ -1388,7 +1395,7 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 				}
 			}
 
-			_, err = er.Postgres.Model(&issue).WherePK().Update()
+			_, err = er.Postgres.Model(issue).WherePK().Update()
 			if err != nil {
 				// Error updating query
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
@@ -1421,6 +1428,7 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 		if !auth {
 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+			return
 		}
 
 		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
@@ -1513,9 +1521,10 @@ func APIProjectIssueCommentHandler(er *Errorly) http.HandlerFunc {
 
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
-		if !auth {
-			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
-		}
+		// if !auth {
+		// 	passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+		// 	return
+		// }
 
 		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
 		if !ok {

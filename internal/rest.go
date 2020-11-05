@@ -166,24 +166,24 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// Projects:
 	router.HandleFunc("/api/projects", APIProjectCreateHandler(er), "POST")                               // Creates a project
 	router.HandleFunc("/api/project/{project_id}", APIProjectHandler(er), "GET")                          // Project information and page 1 of issues
-	router.HandleFunc("/api/project/{project_id}/contributors", APIProjectContributorsHandler(er), "GET") // Returns partial user objects of all contributors
 	router.HandleFunc("/api/project/{project_id}/lazy", APIProjectLazyHandler(er), "GET")                 // Returns partial user objects from provided user arguments
-	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")              // Returns issued based off of a query
 	router.HandleFunc("/api/project/{project_id}/execute", APIProjectExecutorHandler(er), "POST")         // Execute task (star, assign, unassign etc.)
+	router.HandleFunc("/api/project/{project_id}/contributors", APIProjectContributorsHandler(er), "GET") // Returns partial user objects of all contributors
 	// PATCH /api/project/{project_id} - Update project settings
 	// DELETE /api/project/{project_id} - Deletes the project
 
 	// Issues:
-	router.HandleFunc("/api/project/{project_id}/issue", APIProjectIssueCreateHandler(er), "POST")          // Create issue
+	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")                // Returns issued based off of a query
+	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueCreateHandler(er), "POST")         // Create issue
 	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}", APIProjectFetchIssueHandler(er), "GET") // Fetches issue. alias for /api/project/{project_id}/issues?issue=?
 	// PATCH /api/projects/{project_id}/issue/{issue_id} - Update issue
 	// DELETE /api/projects/{project_id}/issue/{issue_id} - Delete issue
 
 	// Comments:
+	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentHandler(er), "GET")        //  Lists issue comments
 	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentCreateHandler(er), "POST") // Create issue comment
 	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
 	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
-	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentHandler(er), "GET") //  Lists issue comments
 
 	// Webhooks:
 	// POST /api/project/{project_id}/webhook - Creates a webhook

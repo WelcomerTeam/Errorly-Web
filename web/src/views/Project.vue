@@ -96,7 +96,12 @@
           >
             <svg-icon type="mdi" :height="20" :path="mdiTrayAlert" />
             Issues
-            <span class="badge rounded-pill bg-secondary">
+            <span
+              v-if="this.project.settings.archived"
+              class="badge rounded-pill bg-warning text-dark"
+              >Archived</span
+            >
+            <span v-else class="badge rounded-pill bg-secondary">
               {{ this.project.open_issues + this.project.active_issues }}
             </span>
           </router-link>
@@ -239,6 +244,52 @@ export default {
         .map((issue) => {
           return issue.id;
         });
+    },
+    execute(marked, issues) {
+      var query = {
+        issues: qs.stringify(issues),
+      };
+
+      if (marked == "assign") {
+        query["action"] = "assign";
+        query["assigning"] = true;
+        query["assignee_id"] = this.assigned;
+      }
+      if (marked == "deassign") {
+        query["action"] = "assign";
+        query["assigning"] = false;
+        query["assignee_id"] = this.assigned;
+      }
+      if (marked == "resolved") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryResolved";
+      }
+      if (marked == "active") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryActive";
+      }
+      if (marked == "open") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryOpen";
+      }
+      if (marked == "invalid") {
+        query["action"] = "mark_status";
+        query["mark_type"] = "EntryInvalid";
+      }
+      if (marked == "lock") {
+        query["action"] = "lock_comments";
+        query["locking"] = true;
+      }
+      if (marked == "unlock") {
+        query["action"] = "lock_comments";
+        query["locking"] = false;
+      }
+
+      if (query["action"] == undefined) {
+        return;
+      }
+
+      this.executeTask(query);
     },
     executeTask(query) {
       this.executing = true;

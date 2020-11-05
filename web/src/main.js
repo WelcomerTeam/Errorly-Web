@@ -1,13 +1,14 @@
-import axios from "axios";
-import router from "./router";
 import Vue from "vue";
+import router from "./router";
+
+import axios from "axios";
 import JSONBig from "json-bigint";
 var jsonBig = JSONBig({ storeAsString: true });
 
-import App from "./App.vue";
-
 import "bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
+
+import App from "./App.vue";
 import "./registerServiceWorker";
 
 Vue.config.productionTip = false;

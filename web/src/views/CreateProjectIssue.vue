@@ -90,7 +90,7 @@
       <button
         type="button"
         class="btn btn-success"
-        :disabled="!validRequest()"
+        :disabled="$parent.project.settings.archived || !validRequest()"
         v-on:click="createIssue(issue)"
       >
         Create Issue

@@ -9,7 +9,13 @@
       Back to issues
     </a>
 
-    <div v-if="this.issue_loading">Issue</div>
+    <div
+      v-if="this.issue_loading"
+      class="spinner-border mx-auto d-flex my-4"
+      role="status"
+    >
+      <span class="visually-hidden">Loading...</span>
+    </div>
     <div class="text-center my-5" v-else-if="this.issue_error">
       <svg-icon
         class="mb-2 text-muted"
@@ -30,43 +36,48 @@
           <h5 class="my-auto mr-1">
             <span
               class="badge rounded-pill"
-              :style="{ background: statusBackground[issue.type] }"
+              :style="{
+                background: statusBackground[$parent.issues[issue_id].type],
+              }"
               aria-label="Error type"
             >
               <svg-icon
                 type="mdi"
                 width="20"
                 height="20"
-                :path="statusIcon[issue.type]"
+                :path="statusIcon[$parent.issues[issue_id].type]"
               />
-              {{ statusText[issue.type] }}
+              {{ statusText[$parent.issues[issue_id].type] }}
             </span>
           </h5>
-          <span class="mr-2">{{ issue.error }}</span>
+          <span class="mr-2">{{ $parent.issues[issue_id].error }}</span>
           <span
             class="text-muted mr-2 h4 font-weight-normal my-auto"
             aria-label="Error function"
-            >{{ issue.function }}</span
+            >{{ $parent.issues[issue_id].function }}</span
           >
           <span
             class="text-muted h5 font-weight-normal my-auto"
             aria-label="Error location"
-            >{{ issue.checkpoint }}</span
+            >{{ $parent.issues[issue_id].checkpoint }}</span
           >
         </h2>
         <span class="dot-right">
           <span class="text-muted">
             <span class="text-body">{{
-              $parent.getUsername(issue.created_by_id) || "ghost"
+              $parent.getUsername($parent.issues[issue_id].created_by_id) ||
+              "ghost"
             }}</span>
             <span
               class="badge rounded-pill bg-primary ml-1"
-              v-if="$parent.getIntegration(issue.created_by_id)"
+              v-if="
+                $parent.getIntegration($parent.issues[issue_id].created_by_id)
+              "
               >Integration</span
             >
             opened this issue
             <timeago
-              :datetime="issue.created_at"
+              :datetime="$parent.issues[issue_id].created_at"
               :auto-update="60"
               :includeSeconds="true"
             />
@@ -75,19 +86,24 @@
             Last modified
             <timeago
               class="text-body"
-              :datetime="issue.last_modified"
+              :datetime="$parent.issues[issue_id].last_modified"
               :auto-update="60"
               :includeSeconds="true"
             />
           </span>
           <span class="pl-1 text-muted">
-            <span class="text-body">{{ issue.occurrences }}</span>
+            <span class="text-body">{{
+              $parent.issues[issue_id].occurrences
+            }}</span>
             occurrences
           </span>
           <span class="pl-1 text-muted">
             Assigned to
             <span class="text-body">
-              {{ $parent.getUsername(issue.assignee_id) || "ghost" }}
+              {{
+                $parent.getUsername($parent.issues[issue_id].assignee_id) ||
+                "ghost"
+              }}
             </span>
           </span>
         </span>
@@ -98,31 +114,34 @@
           <img
             width="40"
             height="40"
-            :src="$parent.getAvatar(issue.created_by_id)"
+            :src="$parent.getAvatar($parent.issues[issue_id].created_by_id)"
           />
           <div class="card ml-3" style="align-items: stretch; width: 100%">
             <div class="card-header text-black-50">
               <b class="text-dark">{{
-                $parent.getUsername(issue.created_by_id) || "ghost"
+                $parent.getUsername($parent.issues[issue_id].created_by_id) ||
+                "ghost"
               }}</b>
               <span
                 class="badge rounded-pill bg-primary ml-1"
-                v-if="$parent.getIntegration(issue.created_by_id)"
+                v-if="
+                  $parent.getIntegration($parent.issues[issue_id].created_by_id)
+                "
                 >Integration</span
               >
               created this issue
               <timeago
-                :datetime="issue.created_at"
+                :datetime="$parent.issues[issue_id].created_at"
                 :auto-update="60"
                 :includeSeconds="true"
               />
             </div>
             <div class="card-body">
-              {{ issue.description }}
+              {{ $parent.issues[issue_id].description }}
               <pre
                 class="bg-light mt-3 mb-0 rounded-lg p-3 border border-muted"
-                v-if="issue.traceback"
-                >{{ issue.traceback }}
+                v-if="$parent.issues[issue_id].traceback"
+                >{{ $parent.issues[issue_id].traceback }}
               </pre>
             </div>
           </div>
@@ -256,21 +275,138 @@
       -->
 
       <div class="p-4">
-        <form-input
-          v-model="comment"
-          :type="'area'"
-          :placeholder="'Leave a comment'"
-          class="mb-2"
-        />
-        <div class="d-flex">
+        <div v-if="!$root.userAuthenticated">
+          <div class="border border-muted rounded-sm py-5 text-muted text-center bg-muted card-header mb-2">
+            You must be logged in to comment
+          </div>
           <button
+            v-if="!$root.userAuthenticated"
             type="button"
             class="btn btn-success mr-2"
-            :disabled="!validRequest()"
-            @click="sendComment(comment)"
+            :disabled="true"
           >
             Comment
           </button>
+        </div>
+        <div v-else>
+          <form-input
+            v-model="comment"
+            :type="'area'"
+            :placeholder="'Leave a comment'"
+            class="mb-2"
+          />
+          <div class="d-flex">
+            <button
+              v-if="$parent.elevated || !$parent.project.settings.limited"
+              type="button"
+              class="btn btn-success mr-2"
+              :disabled="$parent.project.settings.archived || $parent.issues[issue_id].comments_locked || !validRequest()"
+              @click="sendComment(comment)"
+            >
+              Comment
+            </button>
+            <button
+              v-else
+              type="button"
+              class="btn btn-success mr-2"
+              :disabled="true"
+            >
+              You cannot comment
+            </button>
+            <div class="btn-group dropright mr-2" v-if="$parent.elevated">
+              <button
+                class="btn btn-secondary btn-sm dropdown-toggle"
+                type="button"
+                data-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="Modify issue"
+              >
+                <svg-icon type="mdi" :height="16" :path="icons[this.marked]" />
+                {{ text[this.marked] }}
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a class="dropdown-item" v-on:click.prevent="marked = 'none'">
+                    <svg-icon type="mdi" :height="16" :path="mdiDotsHorizontal" />
+                    Select Action</a
+                  >
+                </li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a
+                    class="dropdown-item"
+                    v-on:click.prevent="marked = 'resolved'"
+                  >
+                    <svg-icon type="mdi" :height="16" :path="mdiTray" />
+                    Mark Resolved</a
+                  >
+                </li>
+                <li>
+                  <a class="dropdown-item" v-on:click.prevent="marked = 'active'">
+                    <svg-icon type="mdi" :height="16" :path="mdiTrayFull" />
+                    Mark Active</a
+                  >
+                </li>
+                <li>
+                  <a class="dropdown-item" v-on:click.prevent="marked = 'open'">
+                    <svg-icon type="mdi" :height="16" :path="mdiTrayAlert" />
+                    Mark Open</a
+                  >
+                </li>
+                <li>
+                  <a
+                    class="dropdown-item"
+                    v-on:click.prevent="marked = 'invalid'"
+                  >
+                    <svg-icon type="mdi" :height="16" :path="mdiTrayRemove" />
+                    Mark Invalid</a
+                  >
+                </li>
+                <li>
+                  <hr class="dropdown-divider" />
+                </li>
+                <li>
+                  <a class="dropdown-item" v-on:click.prevent="marked = 'lock'">
+                    <svg-icon type="mdi" :height="16" :path="mdiLock" />
+                    Lock Comments</a
+                  >
+                </li>
+                <li>
+                  <a class="dropdown-item" v-on:click.prevent="marked = 'unlock'">
+                    <svg-icon
+                      type="mdi"
+                      :height="16"
+                      :path="mdiLockOpenVariant"
+                    />
+                    Unlock Comments</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              aria-label="Execute actions"
+              @click="$parent.execute(marked, [$route.params.issueid])"
+              v-if="$parent.elevated"
+            >
+              <div
+                v-if="$parent.executing"
+                style="width: 0.6rem; height: 0.6rem; vertical-align: sub"
+                class="spinner-border"
+                role="status"
+              >
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <svg-icon
+                v-else
+                type="mdi"
+                style="width: 1rem; height: 1rem; vertical-align: sub"
+                :path="mdiPlay"
+              />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -284,6 +420,7 @@ import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
 import JSONBig from "json-bigint";
 import {
+  mdiPlay,
   mdiChevronLeft,
   mdiAlertCircle,
   mdiTray,
@@ -292,6 +429,9 @@ import {
   mdiTrayRemove,
   mdiLock,
   mdiLockOpenVariant,
+  mdiDotsHorizontal,
+  mdiAccountPlus,
+  mdiAccountRemove,
 } from "@mdi/js";
 var jsonBig = JSONBig({ storeAsString: true });
 
@@ -322,7 +462,6 @@ export default {
   name: "ViewProjectIssue",
   data() {
     return {
-      issue: undefined,
       issue_error: undefined,
       issue_loading: true,
 
@@ -350,6 +489,32 @@ export default {
         3: "#28a745",
       },
 
+      marked: "none",
+
+      icons: {
+        none: mdiDotsHorizontal,
+        resolved: mdiTray,
+        active: mdiTrayFull,
+        open: mdiTrayAlert,
+        invalid: mdiTrayRemove,
+        lock: mdiLock,
+        unlock: mdiLockOpenVariant,
+      },
+
+      text: {
+        none: "Select Action",
+        resolved: "Mark resolved",
+        active: "Mark active",
+        open: "Mark open",
+        invalid: "Mark invalid",
+        lock: "Lock comments",
+        unlock: "Unlock comments",
+      },
+
+      mdiPlay: mdiPlay,
+      mdiDotsHorizontal: mdiDotsHorizontal,
+      mdiAccountPlus: mdiAccountPlus,
+      mdiAccountRemove: mdiAccountRemove,
       mdiChevronLeft: mdiChevronLeft,
       mdiAlertCircle: mdiAlertCircle,
       mdiTray: mdiTray,
@@ -369,7 +534,10 @@ export default {
       issueID != undefined
     ) {
       getIssue(projectID, issueID, (err, project) => {
-        next((vm) => vm.setData(err, project));
+        next((vm) => {
+          vm.issue_id = issueID;
+          vm.setData(err, project);
+        });
       });
     } else {
       next();
@@ -378,6 +546,7 @@ export default {
   beforeRouteUpdate(to, from, next) {
     var projectID = to.params?.id;
     var issueID = to.params?.issueid;
+    this.issue_id = issueID;
     if (
       (from.params?.id != projectID || from.params?.issueid != issueID) &&
       projectID != undefined &&
@@ -469,13 +638,18 @@ export default {
       }
     },
     setData(err, response) {
+      console.log(err, response);
       if (err && err != response) {
         this.issue_error = err.toString();
+        this.issue_loading = false;
+        return;
       } else {
         this.issue_error = undefined;
-        this.issue = response.issue;
+        var issue_id = this.$route.params.issueid;
+        this.$set(this.$parent.issues, issue_id, response.issue);
+        this.issue = this.$parent.issues[issue_id];
+        this.issue_loading = false;
       }
-      this.issue_loading = false;
       this.fetchComments(0);
 
       var userQuery = [];
