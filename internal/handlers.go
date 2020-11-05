@@ -490,16 +490,13 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 			}
 		} else {
 			// If you are not logged in, you cannot have any projects B)
+			user = nil
 			projects = make([]structs.PartialProject, 0)
 		}
 
 		// Reverse projects list
 		for i, j := 0, len(projects)-1; i < j; i, j = i+1, j-1 {
 			projects[i], projects[j] = projects[j], projects[i]
-		}
-
-		if !auth {
-			user = nil
 		}
 
 		passResponse(rw, structs.APIMe{
@@ -1229,7 +1226,13 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 			return
 		}
 
-		issues, totalissues, err := fetchProjectIssues(er, project.ID, _pageLimit, page, query, user.ID)
+		var issues []structs.IssueEntry
+		var totalissues int
+		if auth {
+			issues, totalissues, err = fetchProjectIssues(er, project.ID, _pageLimit, page, query, user.ID)
+		} else {
+			issues, totalissues, err = fetchProjectIssues(er, project.ID, _pageLimit, page, query, 0)
+		}
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 			return
