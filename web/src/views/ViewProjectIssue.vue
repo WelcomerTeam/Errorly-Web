@@ -405,6 +405,11 @@
               class="btn btn-outline-secondary btn-sm"
               aria-label="Execute actions"
               @click="$parent.execute(marked, [$route.params.issueid])"
+              :disabled="
+                marked == 'none' ||
+                marked ==
+                  statusText[$parent.issues[issue_id].type].toLowerCase()
+              "
               v-if="$parent.elevated"
             >
               <div

@@ -1,4 +1,9 @@
 <template>
+  <!--
+    types: checkbox, text, area, list, number, password, select
+    props: type, id, label, values, value, disabled, placeholder
+  -->
+
   <div class="form-check" v-if="type == 'checkbox'">
     <input
       class="form-check-input"

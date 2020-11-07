@@ -94,8 +94,8 @@ func createSchema(db *pg.DB) (err error) {
 			CreatedAt:   time.Now().UTC(),
 			CreatedByID: user.ID,
 
-			Integrations: make([]structs.User, 0),
-			Webhooks:     make([]structs.Webhook, 0),
+			Integrations: make([]*structs.User, 0),
+			Webhooks:     make([]*structs.Webhook, 0),
 
 			Settings: structs.ProjectSettings{
 				DisplayName: "Welcomer",

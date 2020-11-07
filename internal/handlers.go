@@ -582,8 +582,8 @@ func APIProjectCreateHandler(er *Errorly) http.HandlerFunc {
 			CreatedAt:   time.Now().UTC(),
 			CreatedByID: user.ID,
 
-			Integrations: make([]structs.User, 0),
-			Webhooks:     make([]structs.Webhook, 0),
+			Integrations: make([]*structs.User, 0),
+			Webhooks:     make([]*structs.Webhook, 0),
 
 			Settings: structs.ProjectSettings{
 				DisplayName: projectName,
@@ -646,8 +646,8 @@ func APIProjectHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		if !elevated {
-			project.Integrations = make([]structs.User, 0)
-			project.Webhooks = make([]structs.Webhook, 0)
+			project.Integrations = make([]*structs.User, 0)
+			project.Webhooks = make([]*structs.Webhook, 0)
 		}
 
 		if !viewable {

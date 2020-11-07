@@ -106,7 +106,7 @@
             </span>
           </router-link>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" v-if="this.elevated">
           <router-link
             :to="'/project/' + this.$route.params.id + '/settings'"
             class="nav-link text-body"

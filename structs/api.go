@@ -119,9 +119,9 @@ type Project struct {
 	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
 	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
-	Integrations []User       `json:"integrations" pg:"rel:has-many,join_fk:project_id"`
-	Webhooks     []Webhook    `json:"webhooks" pg:"rel:has-many,join_fk:project_id"`
-	Issues       []IssueEntry `json:"issues,omitempty" pg:"rel:has-many,join_fk:project_id"`
+	Integrations []*User       `json:"integrations" pg:"rel:has-many,join_fk:project_id"`
+	Webhooks     []*Webhook    `json:"webhooks" pg:"rel:has-many,join_fk:project_id"`
+	Issues       []*IssueEntry `json:"issues,omitempty" pg:"rel:has-many,join_fk:project_id"`
 
 	Settings ProjectSettings `json:"settings"`
 
@@ -191,9 +191,9 @@ type IssueEntry struct {
 	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
 	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
-	CommentCount   int64     `json:"comment_count" pg:",use_zero"`
-	CommentsLocked bool      `json:"comments_locked" pg:",use_zero"`
-	Comments       []Comment `json:"comment_ids,omitempty" pg:"rel:has-many,join_fk:issue_id"`
+	CommentCount   int64      `json:"comment_count" pg:",use_zero"`
+	CommentsLocked bool       `json:"comments_locked" pg:",use_zero"`
+	Comments       []*Comment `json:"comment_ids,omitempty" pg:"rel:has-many,join_fk:issue_id"`
 }
 
 // Comment contains the structure of an issue comment
