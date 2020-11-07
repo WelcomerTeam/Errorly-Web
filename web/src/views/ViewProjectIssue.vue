@@ -146,7 +146,6 @@
             </div>
           </div>
         </div>
-
         <div v-for="(comment, index) in comments" v-bind:key="index">
           <div v-if="comment.type == 0" class="d-flex mt-4">
             <img
@@ -290,6 +289,21 @@
             Comment
           </button>
         </div>
+        <div v-else-if="$parent.issues[issue_id].comments_locked">
+          <div
+            class="border border-muted rounded-sm py-5 text-muted text-center bg-muted card-header mb-2"
+          >
+            Comments are locked on this issue
+          </div>
+          <button
+            v-if="!$root.userAuthenticated"
+            type="button"
+            class="btn btn-success mr-2"
+            :disabled="true"
+          >
+            Comment
+          </button>
+        </div>
         <div v-else>
           <form-input
             v-model="comment"
@@ -319,115 +333,106 @@
             >
               You cannot comment
             </button>
-            <div class="btn-group dropright mr-2" v-if="$parent.elevated">
-              <button
-                class="btn btn-secondary btn-sm dropdown-toggle"
-                type="button"
-                data-toggle="dropdown"
-                aria-expanded="false"
-                aria-label="Modify issue"
-              >
-                <svg-icon type="mdi" :height="16" :path="icons[this.marked]" />
-                {{ text[this.marked] }}
-              </button>
-              <ul class="dropdown-menu">
-                <li>
-                  <a class="dropdown-item" v-on:click.prevent="marked = 'none'">
-                    <svg-icon
-                      type="mdi"
-                      :height="16"
-                      :path="mdiDotsHorizontal"
-                    />
-                    Select Action</a
-                  >
-                </li>
-                <li>
-                  <hr class="dropdown-divider" />
-                </li>
-                <li>
-                  <a
-                    class="dropdown-item"
-                    v-on:click.prevent="marked = 'resolved'"
-                  >
-                    <svg-icon type="mdi" :height="16" :path="mdiTray" />
-                    Mark Resolved</a
-                  >
-                </li>
-                <li>
-                  <a
-                    class="dropdown-item"
-                    v-on:click.prevent="marked = 'active'"
-                  >
-                    <svg-icon type="mdi" :height="16" :path="mdiTrayFull" />
-                    Mark Active</a
-                  >
-                </li>
-                <li>
-                  <a class="dropdown-item" v-on:click.prevent="marked = 'open'">
-                    <svg-icon type="mdi" :height="16" :path="mdiTrayAlert" />
-                    Mark Open</a
-                  >
-                </li>
-                <li>
-                  <a
-                    class="dropdown-item"
-                    v-on:click.prevent="marked = 'invalid'"
-                  >
-                    <svg-icon type="mdi" :height="16" :path="mdiTrayRemove" />
-                    Mark Invalid</a
-                  >
-                </li>
-                <li>
-                  <hr class="dropdown-divider" />
-                </li>
-                <li>
-                  <a class="dropdown-item" v-on:click.prevent="marked = 'lock'">
-                    <svg-icon type="mdi" :height="16" :path="mdiLock" />
-                    Lock Comments</a
-                  >
-                </li>
-                <li>
-                  <a
-                    class="dropdown-item"
-                    v-on:click.prevent="marked = 'unlock'"
-                  >
-                    <svg-icon
-                      type="mdi"
-                      :height="16"
-                      :path="mdiLockOpenVariant"
-                    />
-                    Unlock Comments</a
-                  >
-                </li>
-              </ul>
-            </div>
-            <button
-              class="btn btn-outline-secondary btn-sm"
-              aria-label="Execute actions"
-              @click="$parent.execute(marked, [$route.params.issueid])"
-              :disabled="
-                marked == 'none' ||
-                marked ==
-                  statusText[$parent.issues[issue_id].type].toLowerCase()
-              "
-              v-if="$parent.elevated"
-            >
-              <div
-                v-if="$parent.executing"
-                style="width: 0.6rem; height: 0.6rem; vertical-align: sub"
-                class="spinner-border"
-                role="status"
-              >
-                <span class="visually-hidden">Loading...</span>
-              </div>
-              <svg-icon
-                v-else
-                type="mdi"
-                style="width: 1rem; height: 1rem; vertical-align: sub"
-                :path="mdiPlay"
-              />
-            </button>
           </div>
+        </div>
+        <div v-if="$parent.elevated && !$parent.project.settings.archived">
+          <div class="btn-group dropright mr-2 py-2">
+            <button
+              class="btn btn-secondary btn-sm dropdown-toggle"
+              type="button"
+              data-toggle="dropdown"
+              aria-expanded="false"
+              aria-label="Modify issue"
+            >
+              <svg-icon type="mdi" :height="16" :path="icons[this.marked]" />
+              {{ text[this.marked] }}
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" v-on:click.prevent="marked = 'none'">
+                  <svg-icon type="mdi" :height="16" :path="mdiDotsHorizontal" />
+                  Select Action</a
+                >
+              </li>
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  v-on:click.prevent="marked = 'resolved'"
+                >
+                  <svg-icon type="mdi" :height="16" :path="mdiTray" />
+                  Mark Resolved</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" v-on:click.prevent="marked = 'active'">
+                  <svg-icon type="mdi" :height="16" :path="mdiTrayFull" />
+                  Mark Active</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" v-on:click.prevent="marked = 'open'">
+                  <svg-icon type="mdi" :height="16" :path="mdiTrayAlert" />
+                  Mark Open</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  v-on:click.prevent="marked = 'invalid'"
+                >
+                  <svg-icon type="mdi" :height="16" :path="mdiTrayRemove" />
+                  Mark Invalid</a
+                >
+              </li>
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
+              <li>
+                <a class="dropdown-item" v-on:click.prevent="marked = 'lock'">
+                  <svg-icon type="mdi" :height="16" :path="mdiLock" />
+                  Lock Comments</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" v-on:click.prevent="marked = 'unlock'">
+                  <svg-icon
+                    type="mdi"
+                    :height="16"
+                    :path="mdiLockOpenVariant"
+                  />
+                  Unlock Comments</a
+                >
+              </li>
+            </ul>
+          </div>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            aria-label="Execute actions"
+            @click="$parent.execute(marked, [$route.params.issueid])"
+            :disabled="
+              marked == 'none' ||
+              marked == statusText[$parent.issues[issue_id].type].toLowerCase()
+            "
+            v-if="$parent.elevated"
+          >
+            <div
+              v-if="$parent.executing"
+              style="width: 0.6rem; height: 0.6rem; vertical-align: sub"
+              class="spinner-border"
+              role="status"
+            >
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <svg-icon
+              v-else
+              type="mdi"
+              style="width: 1rem; height: 1rem; vertical-align: sub"
+              :path="mdiPlay"
+            />
+          </button>
         </div>
       </div>
     </div>
@@ -622,7 +627,7 @@ export default {
     },
     lazyLoad(userQuery) {
       if (userQuery.length > 0) {
-        // fetch users
+        // Fetch contributors from a passed user query
         axios
           .get("/api/project/" + this.$route.params.id + "/lazy", {
             transformResponse: [(data) => jsonBig.parse(data)],
@@ -714,7 +719,12 @@ export default {
         .then((result) => {
           var data = result.data;
           if (data.success) {
-            this.comments.push(data.data);
+            if (this.comments_end) {
+              // We will only add the comment to the end
+              // when they are at the end of the message list
+              this.comments.push(data.data);
+            }
+            // this.comments.push(data.data);
           } else {
             this.issue_error = data.error;
           }
