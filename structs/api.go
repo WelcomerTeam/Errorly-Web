@@ -206,7 +206,7 @@ type Comment struct {
 	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
 	Type           ContentType `json:"type"`
-	Content        string      `json:"content,omitempty"`
-	IssueMarked    EntryType   `json:"issue_marked,omitempty" pg:",use_zero"`
-	CommentsOpened bool        `json:"comments_opened,omitempty" pg:",use_zero"`
+	Content        *string     `json:"content,omitempty"`
+	IssueMarked    *EntryType  `json:"issue_marked,omitempty" pg:",use_zero"`
+	CommentsOpened *bool       `json:"comments_opened,omitempty" pg:",use_zero"`
 }

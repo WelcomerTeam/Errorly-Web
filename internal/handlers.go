@@ -1027,7 +1027,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 					CreatedAt:      now,
 					CreatedByID:    user.ID,
 					Type:           structs.CommentsLocked,
-					CommentsOpened: locking,
+					CommentsOpened: &locking,
 				}
 				_, err = er.Postgres.Model(&comment).Insert()
 				if err != nil {
@@ -1071,7 +1071,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 					CreatedAt:   now,
 					CreatedByID: user.ID,
 					Type:        structs.IssueMarked,
-					IssueMarked: markType,
+					IssueMarked: &markType,
 				}
 				_, err = er.Postgres.Model(&comment).Insert()
 				if err != nil {
@@ -1510,7 +1510,7 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 			CreatedAt:   now,
 			CreatedByID: user.ID,
 			Type:        structs.Message,
-			Content:     content,
+			Content:     &content,
 		}
 
 		_, err = er.Postgres.Model(comment).Insert()

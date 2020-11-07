@@ -287,6 +287,7 @@ func createSchema(db *pg.DB) (err error) {
 		}
 
 		println("Create user issue comment")
+		content := "Test :)"
 		comment := &structs.Comment{
 			ID:      idGen.GenerateID(),
 			IssueID: issue.ID,
@@ -295,7 +296,7 @@ func createSchema(db *pg.DB) (err error) {
 			CreatedByID: user2.ID,
 
 			Type:    structs.Message,
-			Content: "Test :)",
+			Content: &content,
 		}
 		_, err = db.Model(comment).Insert()
 		if err != nil {
@@ -304,6 +305,7 @@ func createSchema(db *pg.DB) (err error) {
 		issue.CommentCount++
 
 		println("Create user issue comment2")
+		open := structs.EntryOpen
 		comment2 := &structs.Comment{
 			ID:      idGen.GenerateID(),
 			IssueID: issue.ID,
@@ -312,7 +314,7 @@ func createSchema(db *pg.DB) (err error) {
 			CreatedByID: user2.ID,
 
 			Type:        structs.IssueMarked,
-			IssueMarked: structs.EntryOpen,
+			IssueMarked: &open,
 		}
 		_, err = db.Model(comment2).Insert()
 		if err != nil {
@@ -321,6 +323,7 @@ func createSchema(db *pg.DB) (err error) {
 		issue.CommentCount++
 
 		println("Create user issue comment3")
+		opened := true
 		comment3 := &structs.Comment{
 			ID:      idGen.GenerateID(),
 			IssueID: issue.ID,
@@ -329,7 +332,7 @@ func createSchema(db *pg.DB) (err error) {
 			CreatedByID: user.ID,
 
 			Type:           structs.CommentsLocked,
-			CommentsOpened: true,
+			CommentsOpened: &opened,
 		}
 		_, err = db.Model(comment3).Insert()
 		if err != nil {
@@ -352,7 +355,7 @@ func createSchema(db *pg.DB) (err error) {
 			CreatedByID: user.ID,
 
 			Type:           structs.CommentsLocked,
-			CommentsOpened: true,
+			CommentsOpened: &opened,
 		}
 		_, err = db.Model(comment4).Insert()
 		if err != nil {
@@ -397,6 +400,7 @@ func createSchema(db *pg.DB) (err error) {
 		}
 
 		println("Create close integration issue comment")
+		resolved := structs.EntryResolved
 		comment5 := &structs.Comment{
 			ID:      idGen.GenerateID(),
 			IssueID: issue3.ID,
@@ -405,7 +409,7 @@ func createSchema(db *pg.DB) (err error) {
 			CreatedByID: user.ID,
 
 			Type:        structs.IssueMarked,
-			IssueMarked: structs.EntryResolved,
+			IssueMarked: &resolved,
 		}
 		_, err = db.Model(comment5).Insert()
 		if err != nil {
