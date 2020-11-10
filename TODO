@@ -1,0 +1,4 @@
+- Create settings for users
+- Add suggestion board
+- Implement real time commenting (using websocket)
+- Allow for custom project backgrounds
