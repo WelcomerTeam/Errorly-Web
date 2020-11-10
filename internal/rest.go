@@ -18,48 +18,6 @@ const sessionName = "session"
 const discordUsersMe = "https://discord.com/api/users/@me"
 const discordRefreshDuration = time.Hour
 
-// - User
-// FetchUser(id)
-// CreateUser(user)
-
-// JoinProject(user, project)
-// LeaveProject(user, project)
-
-// - Project
-// CreateProject(project)
-// DeleteProject(project)
-
-// AddIntegration(project, integration)
-// RemoveIntegration(project, integration)
-// RegenerateIntegrationToken(project, integration)
-
-// CreateWebhook(project, webhook)
-// DeleteWebhook(project, webhook)
-// TestWebhook(project, webhook)
-
-// UpdateProjectSettings(project)
-// CreateProjectIssue(project, issue, force)
-
-// FetchProject(project)
-// FetchProjectIssues(project, limit, sorted)
-
-// - Issue
-// AssignToIssue(project, issue, assigned, deassigned)
-// MarkIssue(project, issue, type)
-// LockComments(project, issue, locked)
-
-// UpdateIssueData(project, issue)
-// StarIssue(project, issue, starred)
-
-// FetchIssue(project, issue)
-// FetchIssueComments(project, issue)
-
-// - Comment
-// CreateComment(project, issue, content)
-// // assign, marked, lock are internal and ran in issue command
-
-// FetchComment(project, issue, comment)
-
 // NewMethodRouter creates a new method router
 func NewMethodRouter() *MethodRouter {
 	return &MethodRouter{mux.NewRouter()}
