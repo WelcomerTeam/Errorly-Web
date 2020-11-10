@@ -1,4 +1,6 @@
 import Vue from "vue";
+import App from "./App.vue";
+import "./registerServiceWorker";
 import router from "./router";
 
 import axios from "axios";
@@ -7,9 +9,6 @@ var jsonBig = JSONBig({ storeAsString: true });
 
 import "bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-import App from "./App.vue";
-import "./registerServiceWorker";
 
 Vue.config.productionTip = false;
 
