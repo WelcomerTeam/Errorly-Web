@@ -2,5 +2,7 @@
     "cSpell.enableFiletypes": [
         "vue",
         "vue-html"
-    ]
+    ],
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true
 }
