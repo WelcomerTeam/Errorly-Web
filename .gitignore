@@ -17,3 +17,5 @@ errorly.yaml
 
 logs
 errorly
+*.fasthttp.br
+*.fasthttp.gz
