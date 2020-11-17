@@ -19,3 +19,4 @@ logs
 errorly
 *.fasthttp.br
 *.fasthttp.gz
+errorly

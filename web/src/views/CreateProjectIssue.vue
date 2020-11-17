@@ -19,22 +19,22 @@
     <div v-else>
       <form-input
         v-model="issue.error"
-        :type="'text'"
-        :placeholder="'Title (required)'"
+        type="text"
+        placeholder="Title (required)"
         class="mb-2"
       />
       <form-input
         v-model="issue.description"
-        :type="'area'"
-        :placeholder="'Description'"
+        type="area"
+        placeholder="Description"
         class="mb-4"
       />
 
       <form-input
         v-model="issue.function"
-        :type="'text'"
-        :placeholder="'createIssue()'"
-        :label="'Function (required)'"
+        type="text"
+        placeholder="createIssue()"
+        label="Function (required)"
       />
       <p class="text-muted">
         The function is a place holder for identifying the function the error is
@@ -43,9 +43,9 @@
 
       <form-input
         v-model="issue.checkpoint"
-        :type="'text'"
-        :placeholder="'internal/api.go:53'"
-        :label="'Checkpoint'"
+        type="text"
+        placeholder="internal/api.go:53"
+        label="Checkpoint"
       />
       <p class="text-muted">
         The checkpoint allows you to identify the exact file and line number the
@@ -55,9 +55,9 @@
 
       <form-input
         v-model="issue.traceback"
-        :type="'area'"
-        :placeholder="'Traceback'"
-        :label="'Traceback'"
+        type="area"
+        placeholder="Traceback"
+        label="Traceback"
       />
       <p class="text-muted">
         Enter a detailed issue traceback if you have one.
@@ -65,15 +65,15 @@
 
       <form-input
         v-model="issue.lock_comments"
-        :type="'checkbox'"
-        :label="'Lock comments'"
+        type="checkbox"
+        label="Lock comments"
       />
       <p class="text-muted">If enabled, comments are locked when created</p>
 
       <form-input
         v-model="issue.assigned"
-        :type="'select'"
-        :label="'Assign to'"
+        type="select"
+        label="Assign to"
         :values="contributors"
       />
       <p class="text-muted">
