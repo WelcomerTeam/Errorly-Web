@@ -6,8 +6,6 @@
     <error :message="'You do not have permission to do this'" />
   </div>
   <div v-else>
-    <toast-stack ref="toastStack" />
-
     <pre>{{ JSON.stringify(project, null, 4) }}</pre>
 
     <nav>
@@ -128,10 +126,11 @@
         <button
           class="btn btn-outline-dark"
           @click="
-            $refs.toastStack.addToast({
-              title: 'Hello there',
-              body: 'Hello :D',
-            })
+            $bvToast.toast(`Hello there :)`, {
+              title: 'Welcomen',
+              appendToast: true,
+              variant: 'primary',
+            });
           "
         >
           Create toast
@@ -139,12 +138,10 @@
         <button
           class="btn btn-outline-dark"
           @click="
-            $refs.toastStack.addToast({
-              body: 'Hello :D',
-              onlyBody: true,
-              class: 'text-white bg-primary border-0',
-              closeClass: 'btn-close-white',
-            })
+            $bvToast.toast(`Hello there :)`, {
+              title: 'Welcomen',
+              appendToast: true
+            });
           "
         >
           Create coloured toast
@@ -265,6 +262,7 @@
 </template>
 
 <script>
+
 import {
   mdiCogOutline,
   mdiAccountDetails,
@@ -277,10 +275,9 @@ import SvgIcon from "@jamescoyle/vue-icon";
 import Error from "@/components/Error.vue";
 import FormInput from "@/components/FormInput.vue";
 import FormSubmit from "@/components/FormSubmit.vue";
-import ToastStack from "@/components/ToastStack.vue";
 
 export default {
-  components: { Error, FormInput, FormSubmit, SvgIcon, ToastStack },
+  components: { Error, FormInput, FormSubmit, SvgIcon },
   name: "ProjectSettings",
   data() {
     var data = {

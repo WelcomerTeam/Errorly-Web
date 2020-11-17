@@ -1,6 +1,7 @@
 import Vue from "vue";
 import VueRouter from "vue-router";
 import VueTimeAgo from "vue-timeago";
+import { ToastPlugin } from "bootstrap-vue";
 
 import PageNotFound from "../views/PageNotFound.vue";
 import Home from "../views/Home.vue";
@@ -15,6 +16,7 @@ import ProjectSettings from "../views/ProjectSettings.vue";
 import CreateProjectIssue from "../views/CreateProjectIssue.vue";
 import ViewProjectIssue from "../views/ViewProjectIssue.vue";
 
+Vue.use(ToastPlugin);
 Vue.use(VueRouter);
 Vue.use(VueTimeAgo, {
   name: "Timeago",

@@ -12,6 +12,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 Vue.config.productionTip = false;
 
+require("@/assets/toast.css")
+
 new Vue({
   router,
   render: (h) => h(App),
