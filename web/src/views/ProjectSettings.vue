@@ -121,31 +121,7 @@
           If your project is archived, new issues cannot be made.
         </p>
 
-        <form-submit class="mt-2 mb-5" @click="saveProjectSettings(project)" />
-
-        <button
-          class="btn btn-outline-dark"
-          @click="
-            $bvToast.toast(`Hello there :)`, {
-              title: 'Welcomen',
-              appendToast: true,
-              variant: 'primary',
-            });
-          "
-        >
-          Create toast
-        </button>
-        <button
-          class="btn btn-outline-dark"
-          @click="
-            $bvToast.toast(`Hello there :)`, {
-              title: 'Welcomen',
-              appendToast: true
-            });
-          "
-        >
-          Create coloured toast
-        </button>
+        <form-submit class="mt-2 mb-5" @click="saveProjectSettings()" />
 
         <button
           class="btn btn-outline-danger w-100"
@@ -262,19 +238,23 @@
 </template>
 
 <script>
-
+import SvgIcon from "@jamescoyle/vue-icon";
 import {
   mdiCogOutline,
   mdiAccountDetails,
   mdiWrench,
   mdiWebhook,
 } from "@mdi/js";
+import axios from "axios";
 import { Modal } from "bootstrap";
-import SvgIcon from "@jamescoyle/vue-icon";
+import JSONBig from "json-bigint";
+import qs from "qs";
 
 import Error from "@/components/Error.vue";
 import FormInput from "@/components/FormInput.vue";
 import FormSubmit from "@/components/FormSubmit.vue";
+
+var jsonBig = JSONBig({ storeAsString: true });
 
 export default {
   components: { Error, FormInput, FormSubmit, SvgIcon },
@@ -304,7 +284,61 @@ export default {
       this.deleteProjectModal._modal.show();
     },
     deleteProject() {},
-    saveProjectSettings() {},
+    saveProjectSettings() {
+      axios
+        .post(
+          "/api/project/" + this.$route.params.id,
+          qs.stringify(this.project.settings),
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            var settings = data.data.settings;
+            this.project.settings = settings;
+            this.$parent.project.settings = settings;
+            this.$bvToast.toast(`Project settings have been saved`, {
+              title: "Successfully Saved",
+              appendToast: true,
+            });
+            Object.entries(this.$root.userProjects).forEach(([id, project]) => {
+              if (project.id == this.project.id) {
+                project.name = settings.display_name;
+                project.description = settings.description;
+                project.private = settings.private;
+                project.archived = settings.archived;
+                this.$set(this.$root.userProjects, id, project);
+              }
+            });
+          } else {
+            this.$bvToast.toast(data.error, {
+              title: "Failed to save project settings",
+              appendToast: true,
+            });
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to save project settings",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to save project settings",
+              appendToast: true,
+            });
+          }
+        });
+    },
   },
 };
 </script>

@@ -100,13 +100,15 @@
 </template>
 
 <script>
+import { mdiChevronLeft } from "@mdi/js";
 import axios from "axios";
+import JSONBig from "json-bigint";
 import qs from "qs";
+
 import Error from "@/components/Error.vue";
 import FormInput from "@/components/FormInput.vue";
 import SvgIcon from "@jamescoyle/vue-icon";
-import JSONBig from "json-bigint";
-import { mdiChevronLeft } from "@mdi/js";
+
 var jsonBig = JSONBig({ storeAsString: true });
 
 export default {

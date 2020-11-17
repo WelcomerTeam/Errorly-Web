@@ -127,7 +127,7 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	router.HandleFunc("/api/project/{project_id}/lazy", APIProjectLazyHandler(er), "GET")                 // Returns partial user objects from provided user arguments
 	router.HandleFunc("/api/project/{project_id}/execute", APIProjectExecutorHandler(er), "POST")         // Execute task (star, assign, unassign etc.)
 	router.HandleFunc("/api/project/{project_id}/contributors", APIProjectContributorsHandler(er), "GET") // Returns partial user objects of all contributors
-	// PATCH /api/project/{project_id} - Update project settings
+	router.HandleFunc("/api/project/{project_id}", APIProjectUpdateHandler(er), "POST")                   // Update project settings
 	// DELETE /api/project/{project_id} - Deletes the project
 
 	// Issues:
