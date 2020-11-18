@@ -145,16 +145,14 @@ func NewErrorly(logger io.Writer, level zerolog.Level) (er *Errorly, err error) 
 	er.Logger.Info().Msg("Logging configured")
 
 	er.fs = &fasthttp.FS{
-		Root:               "web/dist",
-		IndexNames:         []string{"index.html"},
-		GenerateIndexPages: true,
-		Compress:           true,
-		AcceptByteRange:    true,
-		CacheDuration:      time.Hour * 24,
-		PathNotFound:       fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) { return }),
+		Root:            "web/dist",
+		Compress:        true,
+		CompressBrotli:  true,
+		AcceptByteRange: true,
+		CacheDuration:   time.Hour * 24 * 30,
+		PathNotFound:    fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) { return }),
 	}
 	er.distHandler = er.fs.NewRequestHandler()
-	// er.distHandler = fasthttp.FSHandler("web/dist", 0)
 
 	return
 }
@@ -206,7 +204,9 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 	fasthttp.CompressHandlerBrotliLevel(func(ctx *fasthttp.RequestCtx) {
 		fasthttpadaptor.NewFastHTTPHandler(er.Router)(ctx)
 		if ctx.Response.StatusCode() != 404 {
+			println("setting content type")
 			ctx.SetContentType("application/json;charset=utf8")
+			return
 		}
 		// If there is no URL in router then try serving from the dist
 		// folder.
@@ -216,6 +216,7 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 		}
 		// If there is no URL in router or in dist then send index.html
 		if ctx.Response.StatusCode() == 404 {
+			println("sending index")
 			ctx.Response.Reset()
 			ctx.SendFile("web/dist/index.html")
 		}

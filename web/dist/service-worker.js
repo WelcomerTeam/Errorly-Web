@@ -14,10 +14,10 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/precache-manifest.0310adeaff9195707b99448d62101c21.js"
+  "/precache-manifest.85873e9526b08702f25ad325fe860713.js"
 );
 
-workbox.core.setCacheNameDetails({prefix: "Errorly"});
+workbox.core.setCacheNameDetails({prefix: "errorly"});
 
 workbox.core.skipWaiting();
 
