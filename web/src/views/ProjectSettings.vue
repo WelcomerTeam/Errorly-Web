@@ -290,7 +290,7 @@ export default {
         .post(
           "/api/project/" + this.$route.params.id + "/delete",
           qs.stringify({
-            confirm: this.deleteProjectModal.confirm
+            confirm: this.deleteProjectModal.confirm,
           }),
           {
             transformResponse: [(data) => jsonBig.parse(data)],
@@ -302,13 +302,16 @@ export default {
         .then((result) => {
           var data = result.data;
           if (data.success) {
-            this.$bvToast.toast(`Project was deleted. Redirecting you to projects...`, {
-              title: "Successfully Deleted",
-              appendToast: true,
-            })
+            this.$bvToast.toast(
+              `Project was deleted. Redirecting you to projects...`,
+              {
+                title: "Successfully Deleted",
+                appendToast: true,
+              }
+            );
             this.$root.fetchMe();
             setTimeout(() => {
-              this.$router.push("/projects")              
+              this.$router.push("/projects");
             }, 3000);
           }
         })

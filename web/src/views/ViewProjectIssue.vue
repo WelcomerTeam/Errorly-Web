@@ -411,7 +411,10 @@
           <button
             class="btn btn-outline-secondary btn-sm"
             aria-label="Execute actions"
-            @click="$parent.execute(marked, [$route.params.issueid])"
+            @click="
+              $parent.execute(marked, [$route.params.issueid]);
+              fetchComments(comments_page);
+            "
             :disabled="
               marked == 'none' ||
               marked == statusText[$parent.issues[issue_id].type].toLowerCase()
@@ -588,6 +591,18 @@ export default {
     next();
   },
   methods: {
+    removeDuplicateComments() {
+      var _comments = Array.from(
+        new Set(Object.values(this.comments).map((c) => c.id))
+      ).map((id) => {
+        for (const key in this.comments) {
+          if (this.comments[key].id == id) {
+            return this.comments[key];
+          }
+        }
+      });
+      return _comments;
+    },
     fetchComments(page) {
       axios
         .get(
@@ -621,6 +636,8 @@ export default {
             if (data.data.end) {
               this.comments_end = true;
             }
+
+            this.comments = this.removeDuplicateComments();
             this.lazyLoad(userQuery);
           }
         });
@@ -664,7 +681,6 @@ export default {
       }
     },
     setData(err, response) {
-      console.log(err, response);
       if (err && err != response) {
         this.issue_error = err.toString();
         this.issue_loading = false;

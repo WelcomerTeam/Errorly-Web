@@ -185,6 +185,19 @@ export default {
           var data = result.data;
           if (data.success) {
             this.$set(this.$parent.issues, data.data.issue.id, data.data.issue);
+
+            if (data.data.new) {
+              if (data.data.issue.type == 0) {
+                this.$parent.project.active_issues++;
+              }
+              if (data.data.issue.type == 1) {
+                this.$parent.project.open_issues++;
+              }
+              if (data.data.issue.type == 3) {
+                this.$parent.project.resolved_issues++;
+              }
+            }
+
             this.$router.push(
               "/project/" +
                 this.$route.params.id +
