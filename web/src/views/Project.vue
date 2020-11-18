@@ -427,43 +427,8 @@ export default {
                 this.$set(this.issues, issue.id, issue);
               });
             }
-            if (userQuery.length > 0) {
-              // fetch users
-              axios
-                .get("/api/project/" + this.$route.params.id + "/lazy", {
-                  transformResponse: [(data) => jsonBig.parse(data)],
-                  params: {
-                    q: qs.stringify(userQuery),
-                  },
-                })
-                .then((result) => {
-                  var data = result.data;
-                  if (data.success) {
-                    Object.values(data.data.users).forEach((user) => {
-                      // We will use $set as this overcomes a Vue limitation
-                      // where adding new properties to an object will not
-                      // trigger changes.
-                      this.$set(this.contributors, user.id, user);
-                      // this.contributors[user.id] = user;
-                    });
-                  } else {
-                    this.issue_error = data.error;
-                  }
-                })
-                .catch((error) => {
-                  if (error.response?.data) {
-                    this.issue_error =
-                      error.response.data.error || error.response.data;
-                  } else {
-                    this.issue_error = error.text || error.toString();
-                  }
-                })
-                .finally(() => {
-                  this.contributors_loaded = true;
-                });
-            } else {
-              this.contributors_loaded = true;
-            }
+            this.lazyLoad(userQuery);
+            this.contributors_loaded = true;
           } else {
             this.issue_error = data.error;
           }
@@ -478,6 +443,44 @@ export default {
         .finally(() => {
           this.issues_loading = false;
         });
+    },
+    lazyLoad(userQuery) {
+      if (userQuery.length > 0) {
+        // Fetch contributors from a passed user query
+        axios
+          .get("/api/project/" + this.$route.params.id + "/lazy", {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            params: {
+              q: qs.stringify(userQuery),
+            },
+          })
+          .then((result) => {
+            var data = result.data;
+            if (data.success) {
+              Object.values(data.data.users).forEach((user) => {
+                // We will use $set as this overcomes a Vue limitation
+                // where adding new properties to an object will not
+                // trigger changes.
+                this.$set(this.contributors, user.id, user);
+              });
+            } else {
+              this.issue_error = data.error;
+            }
+          })
+          .catch((error) => {
+            if (error.response?.data) {
+              this.issue_error =
+                error.response.data.error || error.response.data;
+            } else {
+              this.issue_error = error.text || error.toString();
+            }
+          })
+          .finally(() => {
+            this.contributors_loaded = true;
+          });
+      } else {
+        this.contributors_loaded = true;
+      }
     },
     getUsername(id) {
       if (!this.contributors_loaded) {

@@ -184,13 +184,13 @@ export default {
         .then((result) => {
           var data = result.data;
           if (data.success) {
+            this.$set(this.$parent.issues, data.data.issue.id, data.data.issue);
             this.$router.push(
               "/project/" +
                 this.$route.params.id +
                 "/issue/" +
                 data.data.issue.id
             );
-            this.$set(this.$parent.issues, data.data.issue.id, data.data.issue);
           } else {
             this.error = data.error;
           }

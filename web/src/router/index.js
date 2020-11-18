@@ -3,18 +3,23 @@ import VueRouter from "vue-router";
 import VueTimeAgo from "vue-timeago";
 import { ToastPlugin } from "bootstrap-vue";
 
-import PageNotFound from "../views/PageNotFound.vue";
 import Home from "../views/Home.vue";
 import Projects from "../views/Projects.vue";
 import CreateProject from "../views/CreateProject.vue";
+import PageNotFound from "../views/PageNotFound.vue";
 
-import Project from "../views/Project.vue";
-import ProjectOverview from "../views/ProjectOverview.vue";
-import ProjectIssues from "../views/ProjectIssues.vue";
-import ProjectSettings from "../views/ProjectSettings.vue";
-
-import CreateProjectIssue from "../views/CreateProjectIssue.vue";
-import ViewProjectIssue from "../views/ViewProjectIssue.vue";
+const Project = () =>
+  import(/* webpackChunkName: "project" */ "../views/Project.vue");
+const ProjectOverview = () =>
+  import(/* webpackChunkName: "project" */ "../views/ProjectOverview.vue");
+const ProjectIssues = () =>
+  import(/* webpackChunkName: "project" */ "../views/ProjectIssues.vue");
+const ProjectSettings = () =>
+  import(/* webpackChunkName: "project" */ "../views/ProjectSettings.vue");
+const CreateProjectIssue = () =>
+  import(/* webpackChunkName: "project" */ "../views/CreateProjectIssue.vue");
+const ViewProjectIssue = () =>
+  import(/* webpackChunkName: "project" */ "../views/ViewProjectIssue.vue");
 
 Vue.use(ToastPlugin);
 Vue.use(VueRouter);

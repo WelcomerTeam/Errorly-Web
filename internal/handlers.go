@@ -77,7 +77,10 @@ func verifyProjectVisibility(er *Errorly, rw http.ResponseWriter, vars map[strin
 		return
 	}
 	// Now we have a possibly valid ID we will first get the project
-	project = &structs.Project{}
+	project = &structs.Project{
+		Integrations: make([]*structs.User, 0),
+		Webhooks:     make([]*structs.Webhook, 0),
+	}
 	err = er.Postgres.Model(project).Where("project.id = ?", projectID).Relation("Webhooks").Relation("Integrations").Select()
 	if err != nil {
 		if err == pg.ErrNoRows {
@@ -215,7 +218,7 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int, query
 						initialQuery = initialQuery.Where("assignee_id = ?", id)
 					}
 				}
-				// new querys
+				// new query's
 				// case "has":
 				// 	// assignee
 				// 	// traceback
@@ -1123,6 +1126,119 @@ func APIProjectUpdateHandler(er *Errorly) http.HandlerFunc {
 		passResponse(rw, structs.APIProjectUpdate{
 			Settings: project.Settings,
 		}, true, http.StatusOK)
+	}
+}
+
+// APIProjectDeleteHandler handles deleting a project. Only the project creator can do this
+func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			passResponse(rw, "Failed to parse form", false, http.StatusBadRequest)
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+			return
+		}
+
+		// Retrieve project and user permissions
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !elevated {
+			passResponse(rw, "You do not have permission to do this", false, http.StatusForbidden)
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		// Only the user who created the project is allowed to delete it
+		if project.CreatedByID != user.ID {
+			passResponse(rw, "You must be the project owner to delete it", false, http.StatusUnauthorized)
+			return
+		}
+
+		if project.Settings.DisplayName != r.FormValue("confirm") {
+			passResponse(rw, "Invalid confirm passed", false, http.StatusBadRequest)
+			return
+		}
+
+		results, err := er.Postgres.Model(project).WherePK().Delete()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+		println("Removed", results.RowsAffected(), "project entries")
+
+		results, err = er.Postgres.Model(&structs.User{}).Where("project_id = ?", project.ID).Delete()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+		println("Removed", results.RowsAffected(), "user entries")
+
+		results, err = er.Postgres.Model(&structs.Webhook{}).Where("project_id = ?", project.ID).Delete()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+		println("Removed", results.RowsAffected(), "webhook entries")
+
+		issues := make([]structs.IssueEntry, 0)
+		err = er.Postgres.Model(&issues).Where("project_id = ?", project.ID).Select()
+
+		results, err = er.Postgres.Model(&structs.IssueEntry{}).Where("project_id = ?", project.ID).Delete()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+		println("Removed", results.RowsAffected(), "issue entries")
+
+		affected := 0
+		for _, issue := range issues {
+			results, err = er.Postgres.Model(&structs.Comment{}).Where("issue_id = ?", issue.ID).Delete()
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
+			affected += results.RowsAffected()
+		}
+		println("Removed", affected, "comment entries")
+
+		// Remove project from user's project list
+		_projectIDs := make([]int64, 0, len(user.ProjectIDs))
+		for _, projectID := range user.ProjectIDs {
+			if projectID != project.ID {
+				_projectIDs = append(_projectIDs, projectID)
+			}
+		}
+		user.ProjectIDs = _projectIDs
+
+		_, err = er.Postgres.Model(user).WherePK().Update()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		passResponse(rw, "Project was deleted", true, http.StatusOK)
+		return
 	}
 }
 

@@ -693,7 +693,7 @@ export default {
       ) {
         userQuery.push(response.issue.assignee_id);
       }
-      this.lazyLoad(userQuery);
+      this.$parent.lazyLoad(userQuery);
     },
     validRequest() {
       if (this.comment.trim() == "") {

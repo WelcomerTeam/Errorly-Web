@@ -128,7 +128,7 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	router.HandleFunc("/api/project/{project_id}/execute", APIProjectExecutorHandler(er), "POST")         // Execute task (star, assign, unassign etc.)
 	router.HandleFunc("/api/project/{project_id}/contributors", APIProjectContributorsHandler(er), "GET") // Returns partial user objects of all contributors
 	router.HandleFunc("/api/project/{project_id}", APIProjectUpdateHandler(er), "POST")                   // Update project settings
-	// DELETE /api/project/{project_id} - Deletes the project
+	router.HandleFunc("/api/project/{project_id}/delete", APIProjectDeleteHandler(er), "POST")            // Deletes the project, only the project owner can do this
 
 	// Issues:
 	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")                // Returns issued based off of a query

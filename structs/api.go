@@ -116,7 +116,7 @@ type Project struct {
 	ID int64 `json:"id"`
 
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
-	CreatedBy   *User     `json:"created_by" pg:"rel:has-one"`
+	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
 	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
 	Integrations []*User       `json:"integrations" pg:"rel:has-many,join_fk:project_id"`

@@ -24,6 +24,96 @@ const epoch = 1602507674941
 // 	return nil
 // }
 
+// removeStaleEntries
+func removeStaleEntries(db *pg.DB) (err error) {
+
+	projectIDs := make(map[int64]bool)
+	issueIDs := make(map[int64]bool)
+
+	comments := make([]structs.Comment, 0)
+	err = db.Model(&comments).Select()
+
+	issues := make([]structs.IssueEntry, 0)
+	err = db.Model(&issues).Select()
+
+	projects := make([]structs.Project, 0)
+	err = db.Model(&projects).Select()
+
+	integrations := make([]structs.User, 0)
+	err = db.Model(&integrations).Where("integration = ?", true).Select()
+
+	webhooks := make([]structs.Webhook, 0)
+	err = db.Model(&webhooks).Select()
+
+	println(len(comments), "comments found")
+	println(len(issues), "issues found")
+	println(len(projects), "projects found")
+	println(len(integrations), "integrations found")
+	println(len(webhooks), "webhooks found")
+
+	_comment := structs.Comment{}
+	_issue := structs.IssueEntry{}
+	_integration := structs.User{}
+	_webhook := structs.Webhook{}
+
+	for _, project := range projects {
+		projectIDs[project.ID] = true
+	}
+
+	for _, issue := range issues {
+		issueIDs[issue.ID] = true
+	}
+
+	dels := 0
+
+	for _, integration := range integrations {
+		if _, ok := projectIDs[integration.ProjectID]; !ok {
+			r, err := db.Model(&_integration).Where("project_id = ?", integration.ProjectID).Delete()
+			if err != nil {
+				println(err.Error())
+			} else {
+				dels += r.RowsAffected()
+			}
+		}
+	}
+
+	for _, webhook := range webhooks {
+		if _, ok := projectIDs[webhook.ProjectID]; !ok {
+			r, err := db.Model(&_webhook).Where("project_id = ?", webhook.ProjectID).Delete()
+			if err != nil {
+				println(err.Error())
+			} else {
+				dels += r.RowsAffected()
+			}
+		}
+	}
+
+	for _, issue := range issues {
+		if _, ok := projectIDs[issue.ProjectID]; !ok {
+			r, err := db.Model(&_issue).Where("project_id = ?", issue.ProjectID).Delete()
+			if err != nil {
+				println(err.Error())
+			} else {
+				dels += r.RowsAffected()
+			}
+		}
+	}
+
+	for _, comment := range comments {
+		if _, ok := issueIDs[comment.IssueID]; !ok {
+			r, err := db.Model(&_comment).Where("issue_id = ?", comment.IssueID).Delete()
+			if err != nil {
+				println(err.Error())
+			} else {
+				dels += r.RowsAffected()
+			}
+		}
+	}
+
+	println("Removed", dels, "entries")
+	return nil
+}
+
 // createSchema creates database schema
 func createSchema(db *pg.DB) (err error) {
 	// db.AddQueryHook(dbLogger{})

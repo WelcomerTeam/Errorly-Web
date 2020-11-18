@@ -67,6 +67,7 @@
         role="tabpanel"
         aria-labelledby="v-pills-settings-tab"
       >
+        <!-- Settings Tab -->
         <form-input
           class="mb-2"
           type="text"
@@ -124,6 +125,7 @@
         <form-submit class="mt-2 mb-5" @click="saveProjectSettings()" />
 
         <button
+          v-if="$root.user.id == project.created_by_id"
           class="btn btn-outline-danger w-100"
           @click="showDeleteProjectModal()"
         >
@@ -159,7 +161,7 @@
                 </p>
                 <form-input
                   type="text"
-                  v-model="deleteProjectModal.confirmation"
+                  v-model="deleteProjectModal.confirm"
                   :placeholder="'Type: ' + deleteProjectModal.target"
                 />
               </div>
@@ -176,7 +178,7 @@
                   class="btn btn-danger"
                   @click="deleteProject()"
                   :disabled="
-                    deleteProjectModal.target != deleteProjectModal.confirmation
+                    deleteProjectModal.target != deleteProjectModal.confirm
                   "
                 >
                   Delete Project
@@ -283,7 +285,53 @@ export default {
       );
       this.deleteProjectModal._modal.show();
     },
-    deleteProject() {},
+    deleteProject() {
+      axios
+        .post(
+          "/api/project/" + this.$route.params.id + "/delete",
+          qs.stringify({
+            confirm: this.deleteProjectModal.confirm
+          }),
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.$bvToast.toast(`Project was deleted. Redirecting you to projects...`, {
+              title: "Successfully Deleted",
+              appendToast: true,
+            })
+            this.$root.fetchMe();
+            setTimeout(() => {
+              this.$router.push("/projects")              
+            }, 3000);
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to delete project",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to delete project",
+              appendToast: true,
+            });
+          }
+        })
+        .finally(() => {
+          this.deleteProjectModal._modal.hide();
+        });
+    },
     saveProjectSettings() {
       axios
         .post(

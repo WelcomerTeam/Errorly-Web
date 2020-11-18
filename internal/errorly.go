@@ -204,7 +204,6 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 	fasthttp.CompressHandlerBrotliLevel(func(ctx *fasthttp.RequestCtx) {
 		fasthttpadaptor.NewFastHTTPHandler(er.Router)(ctx)
 		if ctx.Response.StatusCode() != 404 {
-			println("setting content type")
 			ctx.SetContentType("application/json;charset=utf8")
 			return
 		}
@@ -216,7 +215,6 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 		}
 		// If there is no URL in router or in dist then send index.html
 		if ctx.Response.StatusCode() == 404 {
-			println("sending index")
 			ctx.Response.Reset()
 			ctx.SendFile("web/dist/index.html")
 		}
@@ -259,12 +257,14 @@ func (er *Errorly) Open() (err error) {
 	er.Store = sessions.NewCookieStore([]byte(er.Configuration.SessionSecret))
 	er.IDGen = idgenerator.NewIDGenerator(epoch, 0)
 
-	er.Logger.Debug().Msg("Creating schema")
-	err = createSchema(er.Postgres)
-	if err != nil {
-		return err
-	}
-	er.Logger.Debug().Msg("Created schema")
+	// removeStaleEntries(er.Postgres)
+
+	// er.Logger.Debug().Msg("Creating schema")
+	// err = createSchema(er.Postgres)
+	// if err != nil {
+	// 	return err
+	// }
+	// er.Logger.Debug().Msg("Created schema")
 
 	er.Logger.Debug().Msg("Creating endpoints")
 	er.Router = createEndpoints(er)
