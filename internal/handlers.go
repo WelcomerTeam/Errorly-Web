@@ -1461,6 +1461,22 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 				return
 			}
+
+			switch issue.Type {
+			case structs.EntryActive:
+				project.ActiveIssues++
+			case structs.EntryOpen:
+				project.OpenIssues++
+			case structs.EntryResolved:
+				project.ResolvedIssues++
+			}
+
+			// Update issues cache counter on project
+			_, err = er.Postgres.Model(project).WherePK().Update()
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+				return
+			}
 		} else {
 			// An error with this function and error already exists, increment it again
 			issue.Occurrences++
