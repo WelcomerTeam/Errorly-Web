@@ -131,9 +131,10 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	router.HandleFunc("/api/project/{project_id}/delete", APIProjectDeleteHandler(er), "POST")            // Deletes the project, only the project owner can do this
 
 	// Issues:
-	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")                // Returns issued based off of a query
-	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueCreateHandler(er), "POST")         // Create issue
-	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}", APIProjectFetchIssueHandler(er), "GET") // Fetches issue. alias for /api/project/{project_id}/issues?issue=?
+	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueHandler(er), "GET")                         // Returns issued based off of a query
+	router.HandleFunc("/api/project/{project_id}/issues", APIProjectIssueCreateHandler(er), "POST")                  // Create issue
+	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}", APIProjectFetchIssueHandler(er), "GET")          // Fetches issue. alias for /api/project/{project_id}/issues?issue=?
+	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/delete", APIProjectIssueDeleteHandler(er), "POST") // Deletes issue, elevated or issue creator can do this.
 	// PATCH /api/projects/{project_id}/issue/{issue_id} - Update issue
 	// DELETE /api/projects/{project_id}/issue/{issue_id} - Delete issue
 
@@ -142,6 +143,12 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentCreateHandler(er), "POST") // Create issue comment
 	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
 	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
+
+	// Invites:
+	// GET /api/project/{project_id}/join/{join_code} - Get invite code
+	// POST /api/project/{project_id}/join/{join_code} - Join invite code
+	// POST /api/project/{project_id}/join/{join_code}/delete - Remove invite code
+	// POST /api/project/{project_id}/join - Create invite code
 
 	// Webhooks:
 	// POST /api/project/{project_id}/webhook - Creates a webhook

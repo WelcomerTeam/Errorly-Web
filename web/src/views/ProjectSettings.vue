@@ -195,6 +195,19 @@
         aria-labelledby="v-pills-contributors-tab"
       >
         <pre>
+          errorly.com/project/{project_id}/join/{join_code}
+
+          {
+            code: "...","
+            project_id: X,
+            created_by_id: ...,
+            created_at: ...,
+            expires_by: ...,
+          }
+
+          /api/project/{project_id}/join/{join_code}  -- join project through code
+          /api/project/{project_id}/join/regenerate   -- creates new join link
+
           - invite contributors
             - creates link
             - by discord id
@@ -209,6 +222,13 @@
         aria-labelledby="v-pills-integrations-tab"
       >
         <pre>
+          /api/project/{project_id}/integrations
+            - GET  - get integration
+            - POST - create integrations
+          /api/project/{project_id}/integration/{integration_id} POST   - update integrations
+          /api/project/{project_id}/integration/{integration_id}/reset  - resets integration token
+          /api/project/{project_id}/integration/{integration_id}/delete
+
           - create integration
           - manage integrations
             - integration name
@@ -224,6 +244,13 @@
         aria-labelledby="v-pills-webhooks-tab"
       >
         <pre>
+          /api/project/{project_id}/webhooks
+          - GET  - get webhooks
+          - POST - create webhooks
+          /api/project/{project_id}/webhooks/{webhook_id} POST   - update webhook
+          /api/project/{project_id}/webhooks/{webhook_id}/test   - tests webhook
+          /api/project/{project_id}/webhooks/{webhook_id}/delete
+
           - create webhooks
           - manage webhooks
               - active: Failing (3)

@@ -1581,6 +1581,94 @@ func APIProjectFetchIssueHandler(er *Errorly) http.HandlerFunc {
 	}
 }
 
+// APIProjectIssueDeleteHandler handles deleting an issue
+func APIProjectIssueDeleteHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer session.Save(r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			return
+		}
+
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+			return
+		}
+
+		// If an ID is specified we will instead return just the issue
+		issueID, err := strconv.ParseInt(_issueID, 10, 64)
+		if err != nil {
+			passResponse(rw, "ID argument is not valid", false, http.StatusBadRequest)
+			return
+		}
+
+		issue := &structs.IssueEntry{}
+		err = er.Postgres.Model(issue).Where("issue_entry.project_id = ?", project.ID).Where("issue_entry.id = ?", issueID).Select()
+		if err != nil {
+			if err == pg.ErrNoRows {
+				// Invalid issue ID
+				passResponse(rw, "Could not find this issue", false, http.StatusBadRequest)
+				return
+			}
+
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		if !elevated || issue.CreatedByID != user.ID {
+			passResponse(rw, "You must be elevated or the issue creator to delete it", false, http.StatusForbidden)
+			return
+		}
+
+		_, err = er.Postgres.Model(issue).WherePK().Delete()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		switch issue.Type {
+		case structs.EntryActive:
+			project.ActiveIssues--
+		case structs.EntryOpen:
+			project.OpenIssues--
+		case structs.EntryResolved:
+			project.ResolvedIssues--
+		}
+
+		// Update issues cache counter on project
+		_, err = er.Postgres.Model(project).WherePK().Update()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		_, err = er.Postgres.Model(&structs.Comment{}).Where("issue_id = ?", issue.ID).Delete()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+			return
+		}
+
+		passResponse(rw, "Issue was deleted", true, http.StatusOK)
+		return
+	}
+}
+
 // APIProjectIssueCommentHandler returns a list of comments from an issue and returns paginated results
 func APIProjectIssueCommentHandler(er *Errorly) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {

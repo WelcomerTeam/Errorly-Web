@@ -335,8 +335,19 @@
             </button>
           </div>
         </div>
-        <div v-if="$parent.elevated && !$parent.project.settings.archived">
-          <div class="btn-group dropright mr-2 py-2">
+        <div
+          class="pt-2"
+          v-if="
+            $parent.elevated ||
+            $parent.issues[issue.id].created_by == $root.user.id
+          "
+        >
+          <button class="btn btn-dark" @click="deleteIssue()">
+            Delete Issue
+          </button>
+        </div>
+        <div class="pt-2" v-if="$parent.elevated && !$parent.project.settings.archived">
+          <div class="btn-group dropright mr-2">
             <button
               class="btn btn-secondary btn-sm dropdown-toggle"
               type="button"
@@ -591,6 +602,42 @@ export default {
     next();
   },
   methods: {
+    deleteIssue() {
+      if (
+        window.confirm(
+          "Are you sure you want to delete this issue. This cannot be undone."
+        )
+      ) {
+        axios
+          .post(
+            "/api/project/" +
+              this.$route.params.id +
+              "/issue/" +
+              this.$route.params.issueid +
+              "/delete",
+            {
+              transformResponse: [(data) => jsonBig.parse(data)],
+            }
+          )
+          .then((result) => {
+            var data = result.data;
+            if (data.success) {
+              this.$bvToast.toast(
+                `Issue was deleted. Redirecting you to issues...`,
+                {
+                  title: "Successfully Deleted",
+                  appendToast: true,
+                }
+              );
+              setTimeout(() => {
+                this.$router.push(
+                  "/project/" + this.$route.params.id + "/issues"
+                );
+              }, 3000);
+            }
+          });
+      }
+    },
     removeDuplicateComments() {
       var _comments = Array.from(
         new Set(Object.values(this.comments).map((c) => c.id))

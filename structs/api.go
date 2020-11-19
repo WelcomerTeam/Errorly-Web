@@ -210,3 +210,16 @@ type Comment struct {
 	IssueMarked    *EntryType  `json:"issue_marked,omitempty" pg:",use_zero"`
 	CommentsOpened *bool       `json:"comments_opened,omitempty" pg:",use_zero"`
 }
+
+// InviteCode is the structure of an invite
+type InviteCode struct {
+	ID   int64  `json:"id"`
+	Code string `json:"code"`
+
+	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
+	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
+	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
+
+	ProjectID int64     `json:"project_id"`
+	ExpiresBy time.Time `json:"expires_by"`
+}
