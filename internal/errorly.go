@@ -17,6 +17,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/savsgio/gotils"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"golang.org/x/oauth2"
@@ -87,7 +88,7 @@ func (d dbLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Cont
 
 func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 	a, _ := q.FormattedQuery()
-	println(string(a))
+	println(gotils.B2S(a))
 	return nil
 }
 
@@ -209,7 +210,7 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 		}
 		// If there is no URL in router then try serving from the dist
 		// folder.
-		if ctx.Response.StatusCode() == 404 && string(ctx.Path()) != "/" {
+		if ctx.Response.StatusCode() == 404 && gotils.B2S(ctx.Path()) != "/" {
 			ctx.Response.Reset()
 			er.distHandler(ctx)
 		}

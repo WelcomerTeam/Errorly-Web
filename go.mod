@@ -14,6 +14,7 @@ require (
 	github.com/klauspost/compress v1.11.2 // indirect
 	// github.com/lithammer/fuzzysearch v1.1.1
 	github.com/rs/zerolog v1.20.0
+	github.com/savsgio/gotils v0.0.0-20200909101946-939aa3fc74fb
 	github.com/valyala/fasthttp v1.17.0
 	github.com/vmihailenco/msgpack/v5 v5.0.0-rc.2 // indirect
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
