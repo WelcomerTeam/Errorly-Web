@@ -2,8 +2,8 @@
 const webpack = require("webpack");
 
 module.exports = {
-  runtimeCompiler: true,
   integrity: true,
+  productionSourceMap: false,
   pwa: {
     name: "Errorly",
     themeColor: "#212529",
