@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	var lFlag = flag.String("level", "info", "Log level to use (debug/info/warn/error/fatal/panic/no/disabled/trace)")
+	lFlag := flag.String("level", "info", "Log level to use (debug/info/warn/error/fatal/panic/no/disabled/trace)")
+
 	flag.Parse()
 
 	level, err := zerolog.ParseLevel(*lFlag)
@@ -24,6 +25,7 @@ func main() {
 	}
 
 	log := zerolog.New(logger).With().Timestamp().Logger()
+
 	if level != zerolog.NoLevel {
 		log.Info().Str("logLevel", level.String()).Msg("Using logging")
 	}

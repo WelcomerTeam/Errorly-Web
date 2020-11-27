@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// NewIDGenerator returns an IDGenerator
+// NewIDGenerator returns an IDGenerator.
 func NewIDGenerator(initialEpoch int64, shardID int64) *IDGenerator {
 	return &IDGenerator{
 		initialEpoch: initialEpoch,
@@ -24,12 +24,13 @@ type IDGenerator struct {
 	sequence     int64
 }
 
-// GenerateID returns a new id that is int64
+// GenerateID returns a new id that is int64.
 func (id *IDGenerator) GenerateID() int64 {
 	id.Lock()
 	defer id.Unlock()
 
 	ms := time.Now().UTC().UnixNano() / int64(time.Millisecond)
 	id.sequence++ // We only want 10 bits
+
 	return ((ms - id.initialEpoch) << 23) | (id.shardID << 10) | (id.sequence % 1024)
 }
