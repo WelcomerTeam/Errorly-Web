@@ -346,7 +346,10 @@
             Delete Issue
           </button>
         </div>
-        <div class="pt-2" v-if="$parent.elevated && !$parent.project.settings.archived">
+        <div
+          class="pt-2"
+          v-if="$parent.elevated && !$parent.project.settings.archived"
+        >
           <div class="btn-group dropright mr-2">
             <button
               class="btn btn-secondary btn-sm dropdown-toggle"

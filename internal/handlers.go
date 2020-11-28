@@ -503,6 +503,7 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 			// project IDs and update
 			if len(sanitizedProjectIDs) != len(user.ProjectIDs) {
 				user.ProjectIDs = sanitizedProjectIDs
+
 				_, err := er.Postgres.Model(project).WherePK().Update()
 				if err != nil {
 					http.Error(rw, err.Error(), http.StatusInternalServerError)
