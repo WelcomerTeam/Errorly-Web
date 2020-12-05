@@ -218,8 +218,7 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int,
 			case "starred":
 				initialQuery = initialQuery.Where("starred = ?", true)
 			}
-		case "author":
-		case "from":
+		case "author", "from":
 			switch strings.ToLower(thumb) {
 			case "@me":
 				if userID != 0 {
@@ -237,8 +236,7 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int,
 					initialQuery = initialQuery.Where("created_by_id = ?", id)
 				}
 			}
-		case "assigned":
-		case "assignee":
+		case "assigned", "assignee":
 			switch strings.ToLower(thumb) {
 			case "@me":
 				if userID != 0 {
