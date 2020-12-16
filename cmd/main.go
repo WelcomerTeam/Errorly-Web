@@ -11,6 +11,7 @@ import (
 
 func main() {
 	lFlag := flag.String("level", "info", "Log level to use (debug/info/warn/error/fatal/panic/no/disabled/trace)")
+	removeStaleEntries := flag.Bool("remove-stale-entries", false, "Purces unused integrations, issues and comments")
 
 	flag.Parse()
 
@@ -35,7 +36,7 @@ func main() {
 		log.Panic().Err(err).Msgf("Cannot create errorly: %s", err)
 	}
 
-	err = errorly.Open()
+	err = errorly.Open(*removeStaleEntries)
 	if err != nil {
 		log.Panic().Err(err).Msgf("Cannot open errorly: %s", err)
 	}

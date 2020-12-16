@@ -148,8 +148,6 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// Fetches issue. alias for /api/project/{project_id}/issues?issue=?
 	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/delete", APIProjectIssueDeleteHandler(er), "POST")
 	// Deletes issue, elevated or issue creator can do this.
-	// PATCH /api/projects/{project_id}/issue/{issue_id} - Update issue
-	// DELETE /api/projects/{project_id}/issue/{issue_id} - Delete issue
 
 	// Comments:
 	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentHandler(er), "GET")

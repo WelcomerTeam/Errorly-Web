@@ -12,6 +12,7 @@ import (
 	"time"
 
 	idgenerator "github.com/TheRockettek/Errorly-Web/pkg/idgenerator"
+	"github.com/TheRockettek/Errorly-Web/structs"
 	"github.com/go-pg/pg/v10"
 	"github.com/gorilla/sessions"
 	jsoniter "github.com/json-iterator/go"
@@ -67,6 +68,8 @@ type Errorly struct {
 	ctx    context.Context
 	cancel func()
 
+	client *http.Client
+
 	Configuration *Configuration `json:"configuration"`
 
 	Logger zerolog.Logger `json:"-"`
@@ -103,6 +106,8 @@ func NewErrorly(logger io.Writer, level zerolog.Level) (er *Errorly, err error) 
 	er = &Errorly{
 		ctx:    ctx,
 		cancel: cancel,
+
+		client: http.DefaultClient,
 
 		Logger: zerolog.New(logger).With().Timestamp().Logger(),
 	}
@@ -240,7 +245,7 @@ func (er *Errorly) HandleRequest(ctx *fasthttp.RequestCtx) {
 }
 
 // Open starts the web worker.
-func (er *Errorly) Open() (err error) {
+func (er *Errorly) Open(removeStaleEntries bool) (err error) {
 	var secret string
 	secret = er.Configuration.SessionSecret
 
@@ -275,7 +280,12 @@ func (er *Errorly) Open() (err error) {
 	er.Store = sessions.NewCookieStore([]byte(er.Configuration.SessionSecret))
 	er.IDGen = idgenerator.NewIDGenerator(epoch, 0)
 
-	// removeStaleEntries(er.Postgres)
+	if removeStaleEntries {
+		err = RemoveStaleEntries(er.Postgres)
+		if err != nil {
+			er.Logger.Warn().Err(err).Msg("Encountered error removing stale entries")
+		}
+	}
 
 	// er.Logger.Debug().Msg("Creating schema")
 	// err = createSchema(er.Postgres)
@@ -296,4 +306,21 @@ func (er *Errorly) Open() (err error) {
 	}
 
 	return nil
+}
+
+// ExecuteWebhook executes a webhook.
+func (er *Errorly) ExecuteWebhook(webhook *structs.Webhook, body io.Reader) (ok bool, err error) {
+	req, err := http.NewRequestWithContext(er.ctx, "POST", webhook.URL, body)
+	if err != nil {
+		return false, xerrors.Errorf("failed to create request: %w", err)
+	}
+
+	res, err := er.client.Do(req)
+	if err != nil {
+		return false, xerrors.Errorf("failed to handle request: %w", err)
+	}
+
+	defer res.Body.Close()
+
+	return res.StatusCode == 200, nil
 }

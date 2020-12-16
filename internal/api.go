@@ -27,7 +27,7 @@ const epoch = 1602507674941
 // 	return nil
 // }
 
-func removeStaleEntries(db *pg.DB) (err error) {
+func RemoveStaleEntries(db *pg.DB) (err error) {
 	projectIDs := make(map[int64]bool)
 	issueIDs := make(map[int64]bool)
 
@@ -71,7 +71,7 @@ func removeStaleEntries(db *pg.DB) (err error) {
 		if _, ok := projectIDs[integration.ProjectID]; !ok {
 			r, err := db.Model(&_integration).Where("project_id = ?", integration.ProjectID).Delete()
 			if err != nil {
-				println(err.Error())
+				println("Failed to remove integration", integration.ID, err.Error())
 			} else {
 				dels += r.RowsAffected()
 			}
@@ -82,7 +82,7 @@ func removeStaleEntries(db *pg.DB) (err error) {
 		if _, ok := projectIDs[webhook.ProjectID]; !ok {
 			r, err := db.Model(&_webhook).Where("project_id = ?", webhook.ProjectID).Delete()
 			if err != nil {
-				println(err.Error())
+				println("Failed to remove webhooks", webhook.ID, err.Error())
 			} else {
 				dels += r.RowsAffected()
 			}
@@ -93,7 +93,7 @@ func removeStaleEntries(db *pg.DB) (err error) {
 		if _, ok := projectIDs[issue.ProjectID]; !ok {
 			r, err := db.Model(&_issue).Where("project_id = ?", issue.ProjectID).Delete()
 			if err != nil {
-				println(err.Error())
+				println("Failed to remove issue", issue.ID, err.Error())
 			} else {
 				dels += r.RowsAffected()
 			}
@@ -104,7 +104,7 @@ func removeStaleEntries(db *pg.DB) (err error) {
 		if _, ok := issueIDs[comment.IssueID]; !ok {
 			r, err := db.Model(&_comment).Where("issue_id = ?", comment.IssueID).Delete()
 			if err != nil {
-				println(err.Error())
+				println("Failed to remove comment", comment.ID, err.Error())
 			} else {
 				dels += r.RowsAffected()
 			}

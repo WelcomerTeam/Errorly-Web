@@ -123,6 +123,7 @@ type Project struct {
 	Integrations []*User       `json:"integrations" pg:"rel:has-many,join_fk:project_id"`
 	Webhooks     []*Webhook    `json:"webhooks" pg:"rel:has-many,join_fk:project_id"`
 	Issues       []*IssueEntry `json:"issues,omitempty" pg:"rel:has-many,join_fk:project_id"`
+	InviteCodes  []*InviteCode `json:"invite_codes,omitempty" pg:"rel:has-many,join_fk:project_id"`
 
 	Settings ProjectSettings `json:"settings"`
 
@@ -145,7 +146,7 @@ type ProjectSettings struct {
 
 	Archived bool `json:"archived" pg:",use_zero"` // When archived, no new issues can be made until unarchived by creator
 	Private  bool `json:"private" pg:",use_zero"`  // If a project is private, users can only view
-												   // it if they have been added as a contributor.
+	// it if they have been added as a contributor.
 
 	Limited        bool    `json:"limited" pg:",use_zero"` // When enabled, only contributes can create errors
 	ContributorIDs []int64 `json:"contributor_ids"`        // Contributors for project
@@ -160,13 +161,13 @@ type Webhook struct {
 	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
 	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
 
-	Secret      string      `json:"secret"`                      // Secret to send in the header to confirm origin
+	Secret      string      `json:"secret"` // Secret to send in the header to confirm origin
 	URL         string      `json:"url"`
 	Type        WebhookType `json:"type"`
 	JSONContent bool        `json:"json_content" pg:",use_zero"` // When true, uses json else urlencoded
-	Active      bool        `json:"active" pg:",use_zero"` // Boolean if it is enabled
+	Active      bool        `json:"active" pg:",use_zero"`       // Boolean if it is enabled
 
-	Failures uint8 `json:"failures"`              // If 4 failures sending webhook, will disable webhook
+	Failures uint8 `json:"failures"` // If 4 failures sending webhook, will disable webhook
 }
 
 // IssueEntry contains the structure of an issue entry.
@@ -221,6 +222,11 @@ type InviteCode struct {
 	CreatedAt   time.Time `json:"created_at" pg:"default:now()"`
 	CreatedBy   *User     `json:"created_by,omitempty" pg:"rel:has-one"`
 	CreatedByID int64     `json:"created_by_id" pg:",use_zero"`
+
+	Uses    int64 `json:"uses" pg:",use_zero"`
+	MaxUses int64 `json:"max_uses" pg:",use_zero"`
+	// If MaxUses is 0 the it has unlimited uses. When an InviteCode has
+	// been used too much it wont be deleted but instead will display it being expired.
 
 	ProjectID int64     `json:"project_id"`
 	ExpiresBy time.Time `json:"expires_by"`

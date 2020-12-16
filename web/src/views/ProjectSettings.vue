@@ -214,6 +214,48 @@
           - manage contributors
             - remove
         </pre>
+
+        <table class="table table-borderless table-hover card d-table">
+          <thead class="card-header">
+            <tr class="d-table-row">
+              <th colspan="12" scope="col" class="settings col-6 align-middle">
+                Contributors
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              class="list-group-item d-table-row ticket"
+              style="height: 70px"
+            >
+              <th colspan="0" class="align-middle">
+                <img src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png?size=64" class="rounded-circle" alt="Profile picture"/>
+              </th>
+              <th class="ticket-status" colspan="12">
+                <span class="issue-error">ImRock</span>
+              </th>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="table-responsive">
+          <table class="table table-borderless table-hover card d-table">
+            <thead class="card-header">
+              <tr class="d-table-row">
+                <th colspan="12" scope="col" class="col-6 align-middle">Hello :)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="list-group-item d-table-row ticket">
+                <th colspan="12" class="align-middle">
+                  <b>Welp</b>
+                </th>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+
       </div>
       <div
         class="tab-pane fade"
