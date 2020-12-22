@@ -444,8 +444,13 @@ export default {
           this.issues_loading = false;
         });
     },
-    lazyLoad(userQuery) {
+    lazyLoad(_userQuery) {
+      var userQuery = _userQuery.filter((val) => {
+        return !(val in this.contributors);
+      });
+
       if (userQuery.length > 0) {
+        console.debug("Lazy loading users", userQuery.join(", "));
         // Fetch contributors from a passed user query
         axios
           .get("/api/project/" + this.$route.params.id + "/lazy", {
@@ -486,7 +491,9 @@ export default {
       if (!this.contributors_loaded) {
         return "...";
       }
-      return this.contributors[id] ? this.contributors[id].name : undefined;
+      return this.contributors[id]
+        ? this.contributors[id].name
+        : `Unknown user ${id}`;
     },
     getIntegration(id) {
       return this.contributors[id] ? this.contributors[id].integration : false;
@@ -506,6 +513,12 @@ export default {
         this.project = response.project;
         this.elevated = response.elevated;
         this.contributors = response.contributors || {};
+
+        if (this.project?.settings?.contributor_ids?.length > 0) {
+          this.lazyLoad(this.project.settings.contributor_ids.concat(this.project.created_by_id));
+        } else {
+          this.lazyLoad([this.project.created_by_id]);
+        }
 
         // this.issues = response.issues.map(issue => {
         //   issue.checked = false;

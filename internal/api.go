@@ -46,11 +46,15 @@ func RemoveStaleEntries(db *pg.DB) (err error) {
 	webhooks := make([]structs.Webhook, 0)
 	err = db.Model(&webhooks).Select()
 
+	inviteCodes := make([]structs.InviteCode, 0)
+	err = db.Model(&inviteCodes).Select()
+
 	println(len(comments), "comments found")
 	println(len(issues), "issues found")
 	println(len(projects), "projects found")
 	println(len(integrations), "integrations found")
 	println(len(webhooks), "webhooks found")
+	println(len(inviteCodes), "invite codes found")
 
 	_comment := structs.Comment{}
 	_issue := structs.IssueEntry{}
@@ -72,6 +76,17 @@ func RemoveStaleEntries(db *pg.DB) (err error) {
 			r, err := db.Model(&_integration).Where("project_id = ?", integration.ProjectID).Delete()
 			if err != nil {
 				println("Failed to remove integration", integration.ID, err.Error())
+			} else {
+				dels += r.RowsAffected()
+			}
+		}
+	}
+
+	for _, inviteCode := range inviteCodes {
+		if _, ok := projectIDs[inviteCode.ProjectID]; !ok {
+			r, err := db.Model(&_integration).Where("project_id = ?", inviteCode.ProjectID).Delete()
+			if err != nil {
+				println("Failed to remove invite code", inviteCode.ID, err.Error())
 			} else {
 				dels += r.RowsAffected()
 			}
@@ -128,6 +143,7 @@ func createSchema(db *pg.DB) (err error) {
 		&structs.Webhook{},
 		&structs.IssueEntry{},
 		&structs.Comment{},
+		&structs.InviteCode{},
 	}
 
 	for _, model := range models {

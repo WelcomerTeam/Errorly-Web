@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/hashicorp/go-uuid"
+	"golang.org/x/xerrors"
 )
 
 // Issues per page.
@@ -92,12 +93,14 @@ func verifyProjectVisibility(er *Errorly, rw http.ResponseWriter, vars map[strin
 	project = &structs.Project{
 		Integrations: make([]*structs.User, 0),
 		Webhooks:     make([]*structs.Webhook, 0),
+		InviteCodes:  make([]*structs.InviteCode, 0),
 	}
 
 	err = er.Postgres.Model(project).
 		Where("project.id = ?", projectID).
 		Relation("Webhooks").
 		Relation("Integrations").
+		Relation("InviteCodes").
 		Select()
 	if err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
@@ -667,6 +670,7 @@ func APIProjectHandler(er *Errorly) http.HandlerFunc {
 		if !elevated {
 			project.Integrations = make([]*structs.User, 0)
 			project.Webhooks = make([]*structs.Webhook, 0)
+			project.InviteCodes = make([]*structs.InviteCode, 0)
 		}
 
 		if !viewable {
@@ -676,27 +680,6 @@ func APIProjectHandler(er *Errorly) http.HandlerFunc {
 
 			return
 		}
-
-		// contributors := make(map[int64]structs.PartialUser)
-		// for _, contributorID := range project.Settings.ContributorIDs {
-		// 	contributor := structs.User{}
-		// 	err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select()
-		// 	if err != nil {
-		// 		er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
-		// 	} else {
-		// 		contributors[contributor.ID] = structs.PartialUser{
-		// 			ID:     contributor.ID,
-		// 			Name:   contributor.Name,
-		// 			Avatar: contributor.Avatar,
-		// 		}
-		// 	}
-		// }
-
-		// contributors[project.CreatedBy.ID] = structs.PartialUser{
-		// 	ID:     project.CreatedBy.ID,
-		// 	Name:   project.CreatedBy.Name,
-		// 	Avatar: project.CreatedBy.Avatar,
-		// }
 
 		passResponse(rw, structs.APIProject{
 			Project:  project,
@@ -1112,6 +1095,7 @@ func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
 			contributors[contributor.ID] = structs.PartialUser{
 				ID:          contributor.ID,
 				Name:        contributor.Name,
+				Avatar:      contributor.Avatar,
 				Integration: contributor.Integration,
 			}
 		}
@@ -1127,6 +1111,124 @@ func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
 				contributors[contributor.ID] = structs.PartialUser{
 					ID:          contributor.ID,
 					Name:        contributor.Name,
+					Avatar:      contributor.Avatar,
+					Integration: contributor.Integration,
+				}
+			}
+		}
+
+		passResponse(rw, structs.APIProjectLazy{
+			Users: contributors,
+			IDs:   contributorIDs,
+		}, true, http.StatusOK)
+	}
+}
+
+// APIProjectContributorsRemoveHandler handles removing a contributor.
+func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			passResponse(rw, "Failed to parse form", false, http.StatusBadRequest)
+
+			return
+		}
+
+		contributorID, ok := vars["contributor"]
+		if !ok {
+			passResponse(rw, "Missing ContributorID", false, http.StatusBadRequest)
+
+			return
+		}
+
+		userID, err := strconv.ParseInt(contributorID, 10, 64)
+		if err != nil {
+			passResponse(rw, "ContributorID argument is not valid", false, http.StatusBadRequest)
+
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		// Retrieve project and user permissions
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if userID == project.CreatedByID {
+			passResponse(rw, "You cannot remove this user", false, http.StatusForbidden)
+
+			return
+		}
+
+		contributorIDs := make([]int64, 0, len(project.Settings.ContributorIDs))
+
+		for _, contributorID := range project.Settings.ContributorIDs {
+			if contributorID != userID && isContributor(project, contributorID) {
+				contributorIDs = append(contributorIDs, contributorID)
+			}
+		}
+
+		project.Settings.ContributorIDs = contributorIDs
+
+		_, err = er.Postgres.Model(project).WherePK().Update()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		// remove contributor then update
+
+		_contributors := []structs.User{}
+
+		if len(contributorIDs) > 0 {
+			err := er.Postgres.Model(&_contributors).WhereIn("id IN (?)", contributorIDs).Select()
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+				return
+			}
+		}
+
+		contributors := make(map[int64]structs.PartialUser)
+		for _, contributor := range _contributors {
+			contributors[contributor.ID] = structs.PartialUser{
+				ID:          contributor.ID,
+				Name:        contributor.Name,
+				Avatar:      contributor.Avatar,
+				Integration: contributor.Integration,
+			}
+		}
+
+		// Add owner to contributors if not in it already
+		if _, ok := contributors[project.CreatedByID]; !ok {
+			contributor := structs.User{}
+
+			err := er.Postgres.Model(&contributor).Where("id = ?", project.CreatedByID).Select()
+			if err != nil {
+				er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
+			} else {
+				contributors[contributor.ID] = structs.PartialUser{
+					ID:          contributor.ID,
+					Name:        contributor.Name,
+					Avatar:      contributor.Avatar,
 					Integration: contributor.Integration,
 				}
 			}
@@ -1388,6 +1490,112 @@ func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		passResponse(rw, "Project was deleted", true, http.StatusOK)
+	}
+}
+
+// APIProjectTransferHandler handles transferring a project to another user.
+func APIProjectTransferHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			passResponse(rw, "Failed to parse form", false, http.StatusBadRequest)
+
+			return
+		}
+
+		userID, err := strconv.ParseInt(r.FormValue("contributor_id"), 10, 64)
+		if err != nil {
+			passResponse(rw, "ContributorID argument is not valid", false, http.StatusBadRequest)
+
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+
+		// Retrieve project and user permissions
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if user.ID != project.CreatedByID {
+			passResponse(rw, "You need to own the project to transfer", false, http.StatusForbidden)
+
+			return
+		}
+
+		newUser := structs.User{}
+
+		err = er.Postgres.Model(&newUser).Where("id = ?", userID).Select()
+		if err != nil {
+			if xerrors.Is(err, pg.ErrNoRows) {
+				passResponse(rw, "Cannot find user you are trying to transfer to", false, http.StatusBadRequest)
+
+				return
+			}
+
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		if newUser.Name != r.FormValue("confirm") {
+			passResponse(rw, "Invalid confirm passed", false, http.StatusBadRequest)
+
+			return
+		}
+
+		// If we transfer, we will set the created by id to the transferred user
+		// then add the previous owner to the contributors list.
+
+		contributorIDs := make([]int64, 0, len(project.Settings.ContributorIDs))
+		isPreviousContributor := false
+
+		for _, contributorID := range project.Settings.ContributorIDs {
+			if isContributor(project, contributorID) && contributorID != userID {
+				contributorIDs = append(contributorIDs, contributorID)
+			}
+
+			if contributorID == userID {
+				isPreviousContributor = true
+			}
+		}
+
+		if !isPreviousContributor {
+			// The user it is transferred to has to have already been on the contributors list
+			passResponse(rw, "You cannot transfer to this user", false, http.StatusBadRequest)
+
+			return
+		}
+
+		contributorIDs = append(contributorIDs, project.CreatedByID)
+
+		project.CreatedByID = userID
+		project.Settings.ContributorIDs = contributorIDs
+
+		_, err = er.Postgres.Model(project).WherePK().Update()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		passResponse(rw, "Project owner transferred", true, http.StatusOK)
 	}
 }
 

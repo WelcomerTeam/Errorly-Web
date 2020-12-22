@@ -122,8 +122,8 @@ type Project struct {
 
 	Integrations []*User       `json:"integrations" pg:"rel:has-many,join_fk:project_id"`
 	Webhooks     []*Webhook    `json:"webhooks" pg:"rel:has-many,join_fk:project_id"`
+	InviteCodes  []*InviteCode `json:"invite_codes" pg:"rel:has-many,join_fk:project_id"`
 	Issues       []*IssueEntry `json:"issues,omitempty" pg:"rel:has-many,join_fk:project_id"`
-	InviteCodes  []*InviteCode `json:"invite_codes,omitempty" pg:"rel:has-many,join_fk:project_id"`
 
 	Settings ProjectSettings `json:"settings"`
 

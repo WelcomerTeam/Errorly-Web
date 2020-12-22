@@ -6,7 +6,107 @@
     <error :message="'You do not have permission to do this'" />
   </div>
   <div v-else>
-    <pre>{{ JSON.stringify(project, null, 4) }}</pre>
+    <div
+      class="modal fade"
+      id="transferOwnershipModal"
+      tabindex="-1"
+      aria-labelledby="transferOwnershipModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="transferOwnershipModal">
+              Transfer Project Ownership?
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Are you sure you want to transfer the project ownership to
+              <b>{{ transferOwnershipModal.target }}</b>? This cannot be undone.
+            </p>
+            <p>
+              Confirm by entering <b>{{ transferOwnershipModal.target }}</b>
+            </p>
+            <form-input
+              type="text"
+              v-model="transferOwnershipModal.confirm"
+              :placeholder="'Type: ' + transferOwnershipModal.target"
+            />
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              @click="transferOwnershipTo(transferOwnershipModal.contributor)"
+              :disabled="
+                transferOwnershipModal.target != transferOwnershipModal.confirm
+              "
+            >
+              Transfer Ownership
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="removeContributorModal"
+      tabindex="-1"
+      aria-labelledby="removeContributorModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="removeContributorModalModal">
+              Remove Contributor?
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Are you sure you want to remove <b>{{ removeContributorModal.target }}</b> from contributors?
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              @click="removeContributor(removeContributorModal.contributor)"
+            >
+              Remove Contributor
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <nav>
       <div class="nav nav-tabs" id="nav-tab" role="tablist">
@@ -194,67 +294,113 @@
         role="tabpanel"
         aria-labelledby="v-pills-contributors-tab"
       >
-        <pre>
-          errorly.com/project/{project_id}/join/{join_code}
+        <div class="d-flex pb-3 border-bottom border-muted">
+          <div
+            class="input-group input-group-sm border border-secondary rounded mr-3"
+          >
+            <!-- <button class=" btn" type="button" id="search-submit" aria-label="Search">
+              <svg-icon type="mdi" :width="21" :height="21" :path="mdiMagnify" />
+            </button> -->
+            <input
+              type="text"
+              class="form-control border-white"
+              placeholder="Filter contributors by..."
+              aria-label="Search"
+              aria-describedby="search-submit"
+              v-model="contributorFilter"
+            />
+            <button
+              class="btn"
+              type="button"
+              id="search-clear"
+              aria-label="Empty query"
+              @click="contributorFilter = ''"
+            >
+              <svg-icon
+                type="mdi"
+                :width="21"
+                :height="21"
+                :path="mdiCloseCircleOutline"
+              />
+            </button>
+          </div>
+        </div>
 
-          {
-            code: "...","
-            project_id: X,
-            created_by_id: ...,
-            created_at: ...,
-            expires_by: ...,
-          }
-
-          /api/project/{project_id}/join/{join_code}  -- join project through code
-          /api/project/{project_id}/join/regenerate   -- creates new join link
-
-          - invite contributors
-            - creates link
-            - by discord id
-          - manage contributors
-            - remove
-        </pre>
-
-        <table class="table table-borderless table-hover card d-table">
-          <thead class="card-header">
-            <tr class="d-table-row">
-              <th colspan="12" scope="col" class="settings col-6 align-middle">
-                Contributors
-              </th>
-            </tr>
-          </thead>
+        <table class="table table-borderless table-hover d-table">
           <tbody>
             <tr
-              class="list-group-item d-table-row ticket"
-              style="height: 70px"
+              v-for="(contributor, index) in this.filterContributors"
+              v-bind:key="index"
+              class="list-group-item d-table-row card text-left py-3 border-bottom border-muted border-top-0 border-left-0 border-right-0"
             >
-              <th colspan="0" class="align-middle">
-                <img src="https://cdn.discordapp.com/avatars/143090142360371200/a_70444022ea3e5d73dd00d59c5578b07e.png?size=64" class="rounded-circle" alt="Profile picture"/>
+              <th class="ticket-status" colspan="8">
+                <img
+                  :src="$parent.getAvatar(contributor)"
+                  class="rounded-circle"
+                  width="32"
+                  height="32"
+                  alt="Profile picture"
+                />
+                <span class="contributor-name ml-2 align-middle">
+                  <svg-icon
+                    v-if="contributor == project.created_by_id"
+                    class="text-warning"
+                    type="mdi"
+                    width="18"
+                    height="18"
+                    :path="mdiCrown"
+                  />
+                  {{ $parent.getUsername(contributor) }}
+                </span>
               </th>
-              <th class="ticket-status" colspan="12">
-                <span class="issue-error">ImRock</span>
+              <th class="text-right align-middle" colspan="4">
+                <div class="dropdown">
+                  <button
+                    class="btn text-dark"
+                    type="button"
+                    id="dropdownMenuButton"
+                    data-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    <svg-icon
+                      type="mdi"
+                      width="20"
+                      height="20"
+                      :path="mdiDotsVertical"
+                    />
+                  </button>
+                  <ul
+                    class="dropdown-menu"
+                    aria-labelledby="dropdownMenuButton"
+                  >
+                    <li v-if="!(contributor == $root.user.id)">
+                      <a
+                        class="dropdown-item user-select-none pe-auto"
+                        @click="showRemoveContributorModal(contributor)"
+                        >Remove Contributor</a
+                      >
+                    </li>
+                    <li v-if="$root.user.id == project.created_by_id && !(contributor == project.created_by_id)">
+                      <hr class="dropdown-divider" />
+                    </li>
+                    <li v-if="$root.user.id == project.created_by_id && !(contributor == project.created_by_id)">
+                      <a
+                        class="dropdown-item text-danger user-select-none pe-auto"
+                        @click="showTransferOwnershipModal(contributor)"
+                        >Transfer Ownership</a
+                      >
+                    </li>
+                  </ul>
+                </div>
               </th>
             </tr>
           </tbody>
         </table>
 
-        <div class="table-responsive">
-          <table class="table table-borderless table-hover card d-table">
-            <thead class="card-header">
-              <tr class="d-table-row">
-                <th colspan="12" scope="col" class="col-6 align-middle">Hello :)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="list-group-item d-table-row ticket">
-                <th colspan="12" class="align-middle">
-                  <b>Welp</b>
-                </th>
-              </tr>
-            </tbody>
-          </table>
+        <div class="text-center">
+          <span class="text-muted">Want to invite new contributors?</span>
+          <p>Create an invite code</p>
         </div>
-
 
       </div>
       <div
@@ -308,13 +454,23 @@
   </div>
 </template>
 
+<style scoped>
+.contributor-name {
+  font-weight: normal;
+  font-size: large;
+}
+</style>
+
 <script>
 import SvgIcon from "@jamescoyle/vue-icon";
 import {
-  mdiCogOutline,
   mdiAccountDetails,
-  mdiWrench,
+  mdiCogOutline,
+  mdiCloseCircleOutline,
+  mdiCrown,
+  mdiDotsVertical,
   mdiWebhook,
+  mdiWrench,
 } from "@mdi/js";
 import axios from "axios";
 import { Modal } from "bootstrap";
@@ -334,18 +490,51 @@ export default {
     var data = {
       error: undefined,
       project: JSON.parse(JSON.stringify(this.$parent.project)),
-      mdiCogOutline: mdiCogOutline,
-      mdiAccountDetails: mdiAccountDetails,
-      mdiWrench: mdiWrench,
-      mdiWebhook: mdiWebhook,
+      mdiDotsVertical,
+      mdiCogOutline,
+      mdiCloseCircleOutline,
+      mdiCrown,
+      mdiAccountDetails,
+      mdiWrench,
+      mdiWebhook,
+
+      contributorFilter: "",
 
       deleteProjectModal: {
         _modal: undefined,
         target: this.$parent.project.settings.display_name,
         confirm: "",
       },
+
+      removeContributorModal: {
+        _modal: undefined,
+        target: undefined,
+        confirm: "",
+      },
+
+      transferOwnershipModal: {
+        _modal: undefined,
+        target: undefined,
+        confirm: "",
+      },
     };
     return data;
+  },
+  computed: {
+    filterContributors() {
+      var contributors = []
+        .concat(this.project.created_by_id)
+        .concat(this.project.settings.contributor_ids);
+
+      if (this.contributorFilter == "") {
+        return contributors;
+      }
+      var filter = this.contributorFilter.toLowerCase();
+
+      return contributors.filter((object) => {
+        return this.$parent.getUsername(object).toLowerCase().includes(filter);
+      });
+    },
   },
   methods: {
     showDeleteProjectModal() {
@@ -354,6 +543,133 @@ export default {
       );
       this.deleteProjectModal._modal.show();
     },
+
+    showRemoveContributorModal(contributor) {
+      this.removeContributorModal._modal = new Modal(
+        document.getElementById("removeContributorModal")
+      );
+      this.removeContributorModal.contributor = contributor;
+      this.removeContributorModal.target = this.$parent.getUsername(
+        contributor
+      );
+      this.removeContributorModal._modal.show();
+    },
+
+    showTransferOwnershipModal(contributor) {
+      this.transferOwnershipModal._modal = new Modal(
+        document.getElementById("transferOwnershipModal")
+      );
+      this.transferOwnershipModal.contributor = contributor;
+      this.transferOwnershipModal.target = this.$parent.getUsername(
+        contributor
+      );
+      this.transferOwnershipModal._modal.show();
+    },
+
+    transferOwnershipTo(contributor) {
+      axios
+        .post(
+          "/api/project/" + this.$route.params.id + "/transfer",
+          qs.stringify({
+            confirm: this.transferOwnershipModal.confirm,
+            contributor_id: contributor,
+          }),
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.$bvToast.toast(
+              `Project was transferred. Redirecting you to projects...`,
+              {
+                title: "Successfully Transfered",
+                appendToast: true,
+              }
+            );
+            this.$root.fetchMe();
+            setTimeout(() => {
+              this.$router.push("/projects");
+            }, 3000);
+          } else {
+            this.$bvToast.toast(data.error, {
+              title: "Failed to transfer project",
+              appendToast: true,
+            });
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to transfer project",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to transfer project",
+              appendToast: true,
+            });
+          }
+        })
+        .finally(() => {
+          this.transferOwnershipModal._modal.hide();
+        });
+    },
+
+    removeContributor(contributor) {
+      axios
+        .delete(
+          "/api/project/" + this.$route.params.id + "/contributor/" + contributor,
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.project.settings.contributor_ids = data.data.ids;
+
+            Object.values(data.data.users).forEach((user) => {
+              // We will use $set as this overcomes a Vue limitation
+              // where adding new properties to an object will not
+              // trigger changes.
+              this.$set(this.$parent.contributors, user.id, user);
+            });
+          } else {
+            this.$bvToast.toast(data.error, {
+              title: "Failed to remove contributor",
+              appendToast: true,
+            });
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to remove contributor",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to remove contributor",
+              appendToast: true,
+            });
+          }
+        })
+        .finally(() => {
+          this.removeContributorModal._modal.hide();
+        });
+    },
+
     deleteProject() {
       axios
         .post(

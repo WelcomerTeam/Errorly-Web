@@ -287,12 +287,14 @@ func (er *Errorly) Open(removeStaleEntries bool) (err error) {
 		}
 	}
 
-	// er.Logger.Debug().Msg("Creating schema")
-	// err = createSchema(er.Postgres)
-	// if err != nil {
-	// 	return err
-	// }
-	// er.Logger.Debug().Msg("Created schema")
+	er.Logger.Debug().Msg("Creating schema")
+
+	err = createSchema(er.Postgres)
+	if err != nil {
+		return err
+	}
+
+	er.Logger.Debug().Msg("Created schema")
 
 	er.Logger.Debug().Msg("Creating endpoints")
 	er.Router = createEndpoints(er)
