@@ -70,18 +70,17 @@ func passResponse(rw http.ResponseWriter, data interface{}, success bool, status
 }
 
 func verifyProjectVisibility(er *Errorly, rw http.ResponseWriter, vars map[string]string,
-	user *structs.User, auth bool) (project *structs.Project, viewable bool, elevated bool, ok bool) {
-	// Retrieve project_id from /project/{project_id}...
+	user *structs.User, auth bool, basic bool) (project *structs.Project, viewable bool, elevated bool, ok bool) {
+	// Retrieve project_id from /project/{project_id}.
 	_projectID, ok := vars["project_id"]
 
 	if !ok {
-		ok = false
 		passResponse(rw, "Missing Project ID", false, http.StatusBadRequest)
 
 		return
 	}
 
-	// Check projectID is a valid number
+	// Check projectID is a valid number.
 	projectID, err := strconv.ParseInt(_projectID, 10, 64)
 	if err != nil {
 		ok = false
@@ -89,19 +88,26 @@ func verifyProjectVisibility(er *Errorly, rw http.ResponseWriter, vars map[strin
 
 		return
 	}
-	// Now we have a possibly valid ID we will first get the project
+
+	// Now we have a possibly valid ID we will first get the project.
 	project = &structs.Project{
 		Integrations: make([]*structs.User, 0),
 		Webhooks:     make([]*structs.Webhook, 0),
 		InviteCodes:  make([]*structs.InviteCode, 0),
 	}
 
-	err = er.Postgres.Model(project).
+	query := er.Postgres.Model(project).
 		Where("project.id = ?", projectID).
-		Relation("Webhooks").
-		Relation("Integrations").
-		Relation("InviteCodes").
-		Select()
+		Relation("Integrations")
+
+	// If we do not want a basic config, we will also pass webhooks and invite codes.
+	if !basic {
+		query = query.
+			Relation("Webhooks").
+			Relation("InviteCodes")
+	}
+
+	err = query.Select()
 	if err != nil {
 		if errors.Is(err, pg.ErrNoRows) {
 			// Invalid project ID
@@ -158,7 +164,9 @@ func fetchProjectIssues(er *Errorly, projectID int64, limit int, page int,
 	// sort:created_by-desc
 	_issues := make([]structs.IssueEntry, 0, limit)
 
-	initialQuery := er.Postgres.Model(&_issues).Where("issue_entry.project_id = ?", projectID).Order("starred DESC")
+	initialQuery := er.Postgres.Model(&_issues).
+		Where("issue_entry.project_id = ?", projectID).
+		Order("starred DESC")
 
 	parts := []string{}
 	query = strings.ReplaceAll(query, `'`, `"`)
@@ -407,7 +415,9 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 		// an errorly user ID).
 		user := &structs.User{}
 
-		err = er.Postgres.Model(user).Where("hook_id = ?", discordUserResponse.ID).Select()
+		err = er.Postgres.Model(user).
+			Where("hook_id = ?", discordUserResponse.ID).
+			Select()
 		if err != nil {
 			if errors.Is(err, pg.ErrNoRows) {
 				// The user could not be found so create a new user and insert.
@@ -427,7 +437,9 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 				token := CreateUserToken(user)
 				user.Token = token
 
-				_, err = er.Postgres.Model(user).WherePK().Insert()
+				_, err = er.Postgres.Model(user).
+					WherePK().
+					Insert()
 				if err != nil {
 					http.Error(rw, err.Error(), http.StatusInternalServerError)
 				}
@@ -449,7 +461,9 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 			user.Name = discordUserResponse.Username
 			user.Token = token
 
-			_, err = er.Postgres.Model(user).WherePK().Update()
+			_, err = er.Postgres.Model(user).
+				WherePK().
+				Update()
 			if err != nil {
 				http.Error(rw, err.Error(), http.StatusInternalServerError)
 			}
@@ -480,7 +494,9 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 			projects = make([]structs.PartialProject, 0, len(user.ProjectIDs))
 
 			for _, projectID := range user.ProjectIDs {
-				err := er.Postgres.Model(project).Where("id = ?", projectID).Select() // Todo: Convert to a single request
+				err := er.Postgres.Model(project).
+					Where("id = ?", projectID).
+					Select() // Todo: Convert to a single request
 				if err == nil {
 					projects = append(projects, structs.PartialProject{
 						ID:             project.ID,
@@ -505,7 +521,9 @@ func APIMeHandler(er *Errorly) http.HandlerFunc {
 			if len(sanitizedProjectIDs) != len(user.ProjectIDs) {
 				user.ProjectIDs = sanitizedProjectIDs
 
-				_, err := er.Postgres.Model(project).WherePK().Update()
+				_, err := er.Postgres.Model(project).
+					WherePK().
+					Update()
 				if err != nil {
 					http.Error(rw, err.Error(), http.StatusInternalServerError)
 
@@ -580,7 +598,9 @@ func APIProjectCreateHandler(er *Errorly) http.HandlerFunc {
 
 		userProjects := make([]structs.Project, 0)
 
-		err = er.Postgres.Model(&userProjects).Where("created_by_id = ?", user.ID).Select()
+		err = er.Postgres.Model(&userProjects).
+			Where("created_by_id = ?", user.ID).
+			Select()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -627,7 +647,9 @@ func APIProjectCreateHandler(er *Errorly) http.HandlerFunc {
 
 		user.ProjectIDs = append(user.ProjectIDs, project.ID)
 
-		_, err = er.Postgres.Model(user).WherePK().Update()
+		_, err = er.Postgres.Model(user).
+			WherePK().
+			Update()
 		if err != nil {
 			er.Logger.Error().Err(err).Msg("Failed to update user projects")
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
@@ -661,7 +683,7 @@ func APIProjectHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 
 		// Retrieve project and user permissions
-		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, false)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -722,7 +744,7 @@ func APIProjectLazyHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 
 		// Retrieve project and user permissions
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -747,7 +769,9 @@ func APIProjectLazyHandler(er *Errorly) http.HandlerFunc {
 
 			if isContributor(project, contributorID) {
 				contributor := structs.User{}
-				err := er.Postgres.Model(&contributor).Where("id = ?", contributorID).Select() // Todo: Convert to single request
+				err := er.Postgres.Model(&contributor).
+					Where("id = ?", contributorID).
+					Select() // Todo: Convert to single request
 
 				if err != nil {
 					er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
@@ -872,7 +896,7 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		// Retrieve project and user permissions
-		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -940,7 +964,9 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 
 				if change {
 					// Update starred issue counter on project
-					_, err = er.Postgres.Model(project).WherePK().Update()
+					_, err = er.Postgres.Model(project).
+						WherePK().
+						Update()
 					if err != nil {
 						passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -999,7 +1025,9 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 				}
 
 				// Update issues cache counter on project
-				_, err = er.Postgres.Model(project).WherePK().Update()
+				_, err = er.Postgres.Model(project).
+					WherePK().
+					Update()
 				if err != nil {
 					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1027,7 +1055,9 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 
 			issue.LastModified = now
 
-			_, err = er.Postgres.Model(&issue).WherePK().Update()
+			_, err = er.Postgres.Model(&issue).
+				WherePK().
+				Update()
 			if err != nil {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1057,7 +1087,7 @@ func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 
 		// Retrieve project and user permissions
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1082,7 +1112,9 @@ func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
 		_contributors := []structs.User{}
 
 		if len(contributorIDs) > 0 {
-			err := er.Postgres.Model(&_contributors).WhereIn("id IN (?)", contributorIDs).Select()
+			err := er.Postgres.Model(&_contributors).
+				WhereIn("id IN (?)", contributorIDs).
+				Select()
 			if err != nil {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1104,7 +1136,9 @@ func APIProjectContributorsHandler(er *Errorly) http.HandlerFunc {
 		if _, ok := contributors[project.CreatedByID]; !ok {
 			contributor := structs.User{}
 
-			err := er.Postgres.Model(&contributor).Where("id = ?", project.CreatedByID).Select()
+			err := er.Postgres.Model(&contributor).
+				Where("id = ?", project.CreatedByID).
+				Select()
 			if err != nil {
 				er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
 			} else {
@@ -1132,16 +1166,16 @@ func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
 
 		vars := mux.Vars(r)
 
-		if err := r.ParseForm(); err != nil {
-			er.Logger.Error().Err(err).Msg("Failed to parse form")
-			passResponse(rw, "Failed to parse form", false, http.StatusBadRequest)
+		contributorID, ok := vars["contributor"]
+		if !ok {
+			passResponse(rw, "Missing ContributorID", false, http.StatusBadRequest)
 
 			return
 		}
 
-		contributorID, ok := vars["contributor"]
-		if !ok {
-			passResponse(rw, "Missing ContributorID", false, http.StatusBadRequest)
+		if err := r.ParseForm(); err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to parse form")
+			passResponse(rw, "Failed to parse form", false, http.StatusBadRequest)
 
 			return
 		}
@@ -1157,7 +1191,7 @@ func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 
 		// Retrieve project and user permissions
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1187,7 +1221,9 @@ func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
 
 		project.Settings.ContributorIDs = contributorIDs
 
-		_, err = er.Postgres.Model(project).WherePK().Update()
+		_, err = er.Postgres.Model(project).
+			WherePK().
+			Update()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1199,7 +1235,9 @@ func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
 		_contributors := []structs.User{}
 
 		if len(contributorIDs) > 0 {
-			err := er.Postgres.Model(&_contributors).WhereIn("id IN (?)", contributorIDs).Select()
+			err := er.Postgres.Model(&_contributors).
+				WhereIn("id IN (?)", contributorIDs).
+				Select()
 			if err != nil {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1221,7 +1259,9 @@ func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
 		if _, ok := contributors[project.CreatedByID]; !ok {
 			contributor := structs.User{}
 
-			err := er.Postgres.Model(&contributor).Where("id = ?", project.CreatedByID).Select()
+			err := er.Postgres.Model(&contributor).
+				Where("id = ?", project.CreatedByID).
+				Select()
 			if err != nil {
 				er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
 			} else {
@@ -1265,7 +1305,7 @@ func APIProjectUpdateHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		// Retrieve project and user permissions
-		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1291,7 +1331,9 @@ func APIProjectUpdateHandler(er *Errorly) http.HandlerFunc {
 				// ensure there is no other project with the same display name
 				userProjects := make([]structs.Project, 0)
 
-				err := er.Postgres.Model(&userProjects).Where("created_by_id = ?", user.ID).Select()
+				err := er.Postgres.Model(&userProjects).
+					Where("created_by_id = ?", user.ID).
+					Select()
 				if err != nil {
 					passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1339,7 +1381,9 @@ func APIProjectUpdateHandler(er *Errorly) http.HandlerFunc {
 			project.Settings.ContributorIDs = _contributorIDs
 		}
 
-		_, err := er.Postgres.Model(project).WherePK().Update()
+		_, err := er.Postgres.Model(project).
+			WherePK().
+			Update()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1376,7 +1420,7 @@ func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		// Retrieve project and user permissions
-		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1409,7 +1453,9 @@ func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
 			return
 		}
 
-		results, err := er.Postgres.Model(project).WherePK().Delete()
+		results, err := er.Postgres.Model(project).
+			WherePK().
+			Delete()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1418,7 +1464,9 @@ func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
 
 		println("Removed", results.RowsAffected(), "project entries")
 
-		results, err = er.Postgres.Model(&structs.User{}).Where("project_id = ?", project.ID).Delete()
+		results, err = er.Postgres.Model(&structs.User{}).
+			Where("project_id = ?", project.ID).
+			Delete()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1427,7 +1475,9 @@ func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
 
 		println("Removed", results.RowsAffected(), "user entries")
 
-		results, err = er.Postgres.Model(&structs.Webhook{}).Where("project_id = ?", project.ID).Delete()
+		results, err = er.Postgres.Model(&structs.Webhook{}).
+			Where("project_id = ?", project.ID).
+			Delete()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1438,14 +1488,18 @@ func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
 
 		issues := make([]structs.IssueEntry, 0)
 
-		err = er.Postgres.Model(&issues).Where("project_id = ?", project.ID).Select()
+		err = er.Postgres.Model(&issues).
+			Where("project_id = ?", project.ID).
+			Select()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
 			return
 		}
 
-		results, err = er.Postgres.Model(&structs.IssueEntry{}).Where("project_id = ?", project.ID).Delete()
+		results, err = er.Postgres.Model(&structs.IssueEntry{}).
+			Where("project_id = ?", project.ID).
+			Delete()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1482,7 +1536,9 @@ func APIProjectDeleteHandler(er *Errorly) http.HandlerFunc {
 
 		user.ProjectIDs = _projectIDs
 
-		_, err = er.Postgres.Model(user).WherePK().Update()
+		_, err = er.Postgres.Model(user).
+			WherePK().
+			Update()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1519,7 +1575,7 @@ func APIProjectTransferHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 
 		// Retrieve project and user permissions
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1541,7 +1597,9 @@ func APIProjectTransferHandler(er *Errorly) http.HandlerFunc {
 
 		newUser := structs.User{}
 
-		err = er.Postgres.Model(&newUser).Where("id = ?", userID).Select()
+		err = er.Postgres.Model(&newUser).
+			Where("id = ?", userID).
+			Select()
 		if err != nil {
 			if xerrors.Is(err, pg.ErrNoRows) {
 				passResponse(rw, "Cannot find user you are trying to transfer to", false, http.StatusBadRequest)
@@ -1588,7 +1646,9 @@ func APIProjectTransferHandler(er *Errorly) http.HandlerFunc {
 		project.CreatedByID = userID
 		project.Settings.ContributorIDs = contributorIDs
 
-		_, err = er.Postgres.Model(project).WherePK().Update()
+		_, err = er.Postgres.Model(project).
+			WherePK().
+			Update()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1612,7 +1672,7 @@ func APIProjectIssueHandler(er *Errorly) http.HandlerFunc {
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
 
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1737,7 +1797,7 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		// Retrieve project and user permissions
-		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1859,7 +1919,9 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 			}
 
 			// Update issues cache counter on project
-			_, err = er.Postgres.Model(project).WherePK().Update()
+			_, err = er.Postgres.Model(project).
+				WherePK().
+				Update()
 			if err != nil {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -1897,7 +1959,9 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 				}
 			}
 
-			_, err = er.Postgres.Model(issue).WherePK().Update()
+			_, err = er.Postgres.Model(issue).
+				WherePK().
+				Update()
 			if err != nil {
 				// Error updating query
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
@@ -1921,10 +1985,17 @@ func APIProjectFetchIssueHandler(er *Errorly) http.HandlerFunc {
 
 		vars := mux.Vars(r)
 
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+
+			return
+		}
+
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
 
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1934,13 +2005,6 @@ func APIProjectFetchIssueHandler(er *Errorly) http.HandlerFunc {
 			// No permission to view project. We will treat like the project
 			// does not exist.
 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
-
-			return
-		}
-
-		_issueID, ok := vars["issue_id"]
-		if !ok {
-			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
 
 			return
 		}
@@ -1986,10 +2050,17 @@ func APIProjectIssueDeleteHandler(er *Errorly) http.HandlerFunc {
 
 		vars := mux.Vars(r)
 
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+
+			return
+		}
+
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
 
-		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -1999,13 +2070,6 @@ func APIProjectIssueDeleteHandler(er *Errorly) http.HandlerFunc {
 			// No permission to view project. We will treat like the project
 			// does not exist.
 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
-
-			return
-		}
-
-		_issueID, ok := vars["issue_id"]
-		if !ok {
-			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
 
 			return
 		}
@@ -2043,7 +2107,9 @@ func APIProjectIssueDeleteHandler(er *Errorly) http.HandlerFunc {
 			return
 		}
 
-		_, err = er.Postgres.Model(issue).WherePK().Delete()
+		_, err = er.Postgres.Model(issue).
+			WherePK().
+			Delete()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -2061,14 +2127,18 @@ func APIProjectIssueDeleteHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		// Update issues cache counter on project
-		_, err = er.Postgres.Model(project).WherePK().Update()
+		_, err = er.Postgres.Model(project).
+			WherePK().
+			Update()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
 			return
 		}
 
-		_, err = er.Postgres.Model(&structs.Comment{}).Where("issue_id = ?", issue.ID).Delete()
+		_, err = er.Postgres.Model(&structs.Comment{}).
+			Where("issue_id = ?", issue.ID).
+			Delete()
 		if err != nil {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
@@ -2087,14 +2157,17 @@ func APIProjectIssueCommentHandler(er *Errorly) http.HandlerFunc {
 
 		vars := mux.Vars(r)
 
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+
+			return
+		}
+
 		// Authenticate the user
 		auth, user := er.AuthenticateSession(session)
-		// if !auth {
-		// 	passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
-		// 	return
-		// }
 
-		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -2104,13 +2177,6 @@ func APIProjectIssueCommentHandler(er *Errorly) http.HandlerFunc {
 			// No permission to view project. We will treat like the project
 			// does not exist.
 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
-
-			return
-		}
-
-		_issueID, ok := vars["issue_id"]
-		if !ok {
-			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
 
 			return
 		}
@@ -2189,6 +2255,13 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 
 		vars := mux.Vars(r)
 
+		_issueID, ok := vars["issue_id"]
+		if !ok {
+			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
+
+			return
+		}
+
 		if err := r.ParseForm(); err != nil {
 			er.Logger.Error().Err(err).Msg("Failed to parse form")
 			passResponse(rw, "Failed to parse form", false, http.StatusBadRequest)
@@ -2204,7 +2277,7 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 			return
 		}
 
-		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
 		if !ok {
 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
 			return
@@ -2214,13 +2287,6 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 			// No permission to view project. We will treat like the project
 			// does not exist.
 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
-
-			return
-		}
-
-		_issueID, ok := vars["issue_id"]
-		if !ok {
-			passResponse(rw, "Missing Issue ID", false, http.StatusBadRequest)
 
 			return
 		}
@@ -2297,6 +2363,125 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 		passResponse(rw, comment, true, http.StatusOK)
 	}
 }
+
+// // APIProjectInviteUseHandler handles a user joining an invite.
+// func APIProjectInviteUseHandler(er *Errorly) http.HandlerFunc {
+// 	return func(rw http.ResponseWriter, r *http.Request) {
+// 		session, _ := er.Store.Get(r, sessionName)
+// 		defer er.SaveSession(session, r, rw)
+
+// 		vars := mux.Vars(r)
+
+// 		invite_code, ok := vars["join_code"]
+// 		if !ok {
+// 			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
+// 			return
+// 		}
+
+// 		// Authenticate the user
+// 		auth, user := er.AuthenticateSession(session)
+// 		if !auth {
+// 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+// 			return
+// 		}
+
+// 		project, _, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+// 		if !ok {
+// 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+// 			return
+// 		}
+
+// 		invite := &structs.InviteCode{}
+
+// 		err = er.Postgres.Model(invite).
+// 			Where("invite.project_id = ?", project.ID).
+// 			Where("invite.code = ?", invite_code).
+// 			Select()
+// 		// if err != nil {
+// 		// }
+
+// 		// check if invite is legit (enough uses, not expired)
+// 		// increment 1 use and update
+// 		// add user to contributors
+// 		// update project contribuitors
+// 		// add project to users projects list
+// 		// update user
+// 	}
+// }
+
+// // APIProjectInviteDeleteHandler handles deleting an invite.
+// func APIProjectInviteDeleteHandler(er *Errorly) http.HandlerFunc {
+// 	return func(rw http.ResponseWriter, r *http.Request) {
+// 		session, _ := er.Store.Get(r, sessionName)
+// 		defer er.SaveSession(session, r, rw)
+
+// 		vars := mux.Vars(r)
+
+// 		// Authenticate the user
+// 		auth, user := er.AuthenticateSession(session)
+// 		if !auth {
+// 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+// 			return
+// 		}
+
+// 		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+// 		if !ok {
+// 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+// 			return
+// 		}
+
+// 		if !viewable {
+// 			// No permission to view project. We will treat like the project
+// 			// does not exist.
+// 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+// 			return
+// 		}
+
+// 		// check permissions
+// 		// remove invite
+
+// 	}
+// }
+
+// // APIProjectInviteCreateHandler handles creating an invite.
+// func APIProjectInviteCreateHandler(er *Errorly) http.HandlerFunc {
+// 	return func(rw http.ResponseWriter, r *http.Request) {
+// 		session, _ := er.Store.Get(r, sessionName)
+// 		defer er.SaveSession(session, r, rw)
+
+// 		vars := mux.Vars(r)
+
+// 		// Authenticate the user
+// 		auth, user := er.AuthenticateSession(session)
+// 		if !auth {
+// 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+// 			return
+// 		}
+
+// 		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+// 		if !ok {
+// 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+// 			return
+// 		}
+
+// 		if !viewable {
+// 			// No permission to view project. We will treat like the project
+// 			// does not exist.
+// 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+// 			return
+// 		}
+
+//	 	expiration: int in minutes for how long it lasts
+//		uses: int
+
+// 		// parse form
+// 		// verify
+// 		// insert invite
+
+// 	}
+// }
 
 // func Handler(er *Errorly) http.HandlerFunc {
 // 	return

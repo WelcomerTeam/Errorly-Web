@@ -515,7 +515,11 @@ export default {
         this.contributors = response.contributors || {};
 
         if (this.project?.settings?.contributor_ids?.length > 0) {
-          this.lazyLoad(this.project.settings.contributor_ids.concat(this.project.created_by_id));
+          this.lazyLoad(
+            this.project.settings.contributor_ids.concat(
+              this.project.created_by_id
+            )
+          );
         } else {
           this.lazyLoad([this.project.created_by_id]);
         }

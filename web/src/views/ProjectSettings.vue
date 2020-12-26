@@ -29,7 +29,8 @@
           <div class="modal-body">
             <p>
               Are you sure you want to transfer the project ownership to
-              <b>{{ transferOwnershipModal.target }}</b>? This cannot be undone.
+              <b>{{ transferOwnershipModal.target }}</b
+              >? This cannot be undone.
             </p>
             <p>
               Confirm by entering <b>{{ transferOwnershipModal.target }}</b>
@@ -85,7 +86,8 @@
           </div>
           <div class="modal-body">
             <p>
-              Are you sure you want to remove <b>{{ removeContributorModal.target }}</b> from contributors?
+              Are you sure you want to remove
+              <b>{{ removeContributorModal.target }}</b> from contributors?
             </p>
           </div>
           <div class="modal-footer">
@@ -133,6 +135,18 @@
         >
           <svg-icon type="mdi" :height="20" :path="mdiAccountDetails" />
           Contributors
+        </a>
+        <a
+          class="nav-link"
+          id="v-pills-invites-tab"
+          data-toggle="pill"
+          href="#v-pills-invites"
+          role="tab"
+          aria-controls="v-pills-invites"
+          aria-selected="false"
+        >
+          <svg-icon type="mdi" :height="20" :path="mdiAccountMultiplePlus" />
+          Invites
         </a>
         <a
           class="nav-link"
@@ -380,10 +394,20 @@
                         >Remove Contributor</a
                       >
                     </li>
-                    <li v-if="$root.user.id == project.created_by_id && !(contributor == project.created_by_id)">
+                    <li
+                      v-if="
+                        $root.user.id == project.created_by_id &&
+                        !(contributor == project.created_by_id)
+                      "
+                    >
                       <hr class="dropdown-divider" />
                     </li>
-                    <li v-if="$root.user.id == project.created_by_id && !(contributor == project.created_by_id)">
+                    <li
+                      v-if="
+                        $root.user.id == project.created_by_id &&
+                        !(contributor == project.created_by_id)
+                      "
+                    >
                       <a
                         class="dropdown-item text-danger user-select-none pe-auto"
                         @click="showTransferOwnershipModal(contributor)"
@@ -401,7 +425,73 @@
           <span class="text-muted">Want to invite new contributors?</span>
           <p>Create an invite code</p>
         </div>
+      </div>
+      <div
+        class="tab-pane fade"
+        id="v-pills-invites"
+        role="tabpanel"
+        aria-labelledby="v-pills-invites-tab"
+      >
+        <div class="d-flex pb-3 border-bottom border-muted">
+          <button
+            class="btn btn-success w-100"
+            @click="showCreateInviteModal()"
+          >
+            Create Invite
+          </button>
+        </div>
 
+        <table class="table table-borderless table-hover d-table">
+          <tbody>
+            <tr
+              v-for="(invite, index) in project.invite_codes"
+              v-bind:key="index"
+              class="list-group-item d-table-row card text-left py-3 border-bottom border-muted border-top-0 border-left-0 border-right-0"
+            >
+              <th class="invite" colspan="7">
+                <span class="invite-code">{{ invite.code }}</span>
+                <span class="invite-footer align-middle">
+                  Created by
+                  <b>ImRock</b>
+                  <timeago
+                    :datetime="invite.created_at"
+                    :auto-update="60"
+                    :includeSeconds="true"
+                  />
+                  <div
+                    v-if="new Date(invite.expires_by) > new Date()"
+                    class="d-inline"
+                  >
+                    expires
+                    <timeago
+                      :datetime="invite.expires_by"
+                      :auto-update="60"
+                      :includeSeconds="true"
+                    />
+                  </div>
+                </span>
+              </th>
+              <th class="text-right align-middle" colspan="1">
+                {{ invite.uses }} /
+                {{ invite.max_uses == 0 ? "∞" : invite.max_uses }}
+              </th>
+              <th class="text-right align-middle" colspan="4">
+                <button
+                  class="btn text-dark"
+                  type="button"
+                  @click="removeInvite(invite.id)"
+                >
+                  <svg-icon
+                    type="mdi"
+                    width="20"
+                    height="20"
+                    :path="mdiClose"
+                  />
+                </button>
+              </th>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <div
         class="tab-pane fade"
@@ -459,13 +549,37 @@
   font-weight: normal;
   font-size: large;
 }
+
+.invite {
+  height: 0;
+}
+.invite > * {
+  vertical-align: middle;
+}
+.invite .invite-code {
+  font-weight: normal;
+  font-size: x-large;
+  color: black;
+}
+.invite .invite-footer {
+  display: block;
+  font-weight: 400;
+}
+.invite .invite-footer * {
+  margin-right: 4px;
+}
+.invite .invite-footer > svg {
+  margin: 0 2px;
+}
 </style>
 
 <script>
 import SvgIcon from "@jamescoyle/vue-icon";
 import {
   mdiAccountDetails,
+  mdiAccountMultiplePlus,
   mdiCogOutline,
+  mdiClose,
   mdiCloseCircleOutline,
   mdiCrown,
   mdiDotsVertical,
@@ -488,15 +602,18 @@ export default {
   name: "ProjectSettings",
   data() {
     var data = {
+      mdiAccountDetails,
+      mdiAccountMultiplePlus,
+      mdiClose,
+      mdiCloseCircleOutline,
+      mdiCogOutline,
+      mdiCrown,
+      mdiDotsVertical,
+      mdiWebhook,
+      mdiWrench,
+
       error: undefined,
       project: JSON.parse(JSON.stringify(this.$parent.project)),
-      mdiDotsVertical,
-      mdiCogOutline,
-      mdiCloseCircleOutline,
-      mdiCrown,
-      mdiAccountDetails,
-      mdiWrench,
-      mdiWebhook,
 
       contributorFilter: "",
 
@@ -566,6 +683,13 @@ export default {
       this.transferOwnershipModal._modal.show();
     },
 
+    showCreateInviteModal() {
+      this.showCreateInviteModal._modal = new Modal(
+        document.getElementById("createInviteModal")
+      );
+      this.showCreateInviteModal._modal.show();
+    },
+
     transferOwnershipTo(contributor) {
       axios
         .post(
@@ -626,7 +750,10 @@ export default {
     removeContributor(contributor) {
       axios
         .delete(
-          "/api/project/" + this.$route.params.id + "/contributor/" + contributor,
+          "/api/project/" +
+            this.$route.params.id +
+            "/contributor/" +
+            contributor,
           {
             transformResponse: [(data) => jsonBig.parse(data)],
           }
@@ -667,6 +794,100 @@ export default {
         })
         .finally(() => {
           this.removeContributorModal._modal.hide();
+        });
+    },
+
+    removeInvite(id) {
+      axios
+        .delete(
+          "/api/project/" + this.$route.params.id + "/invite/" + id + "/delete",
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.$bvToast.toast(
+              `Removed invite`,
+              {
+                title: "Removed invite",
+                appendToast: true,
+              }
+            )
+
+            var invites = [];
+            this.project.invite_codes.forEach(invite => {
+              if (invite.id !== id) {
+                invites.push(invite);
+              }
+            });
+            this.project.invite_codes = invites;
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to delete invite",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to delete invite",
+              appendToast: true,
+            });
+          }
+        })
+    },
+
+    createInvite() {
+      axios
+        .post(
+          "/api/project/" + this.$route.params.id + "/invite",
+          qs.stringify({
+            uses: this.showCreateInviteModal.uses,
+            expiration: this.showCreateInviteModal.expiration,
+          }),
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.$bvToast.toast(
+              `Invite a user with the code ${data.data.code}`,
+              {
+                title: "Successfully created invite",
+                appendToast: true,
+              }
+            );
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to create invite",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to create invite",
+              appendToast: true,
+            });
+          }
+        })
+        .finally(() => {
+          this.showCreateInviteModal._modal.hide();
         });
     },
 

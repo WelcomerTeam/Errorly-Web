@@ -229,5 +229,5 @@ type InviteCode struct {
 	// been used too much it wont be deleted but instead will display it being expired.
 
 	ProjectID int64     `json:"project_id"`
-	ExpiresBy time.Time `json:"expires_by"`
+	ExpiresBy time.Time `json:"expires_by" pg:",use_zero"`
 }

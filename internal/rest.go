@@ -159,14 +159,16 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	//  Lists issue comments
 	router.HandleFunc("/api/project/{project_id}/issue/{issue_id}/comments", APIProjectIssueCommentCreateHandler(er), "POST")
 	// Create issue comment
+
 	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
 	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
 
 	// Invites:
-	// GET /api/project/{project_id}/join/{join_code} - Get invite code
-	// POST /api/project/{project_id}/join/{join_code} - Join invite code
-	// POST /api/project/{project_id}/join/{join_code}/delete - Remove invite code
-	// POST /api/project/{project_id}/join - Create invite code
+	// GET /api/project/{project_id}/join/{join_code} - Invite code page
+
+	// POST /api/project/{project_id}/invite/{join_code} - Use invite code
+	// DELETE /api/project/{project_id}/invite/{join_code} - Remove invite code
+	// POST /api/project/{project_id}/invite - Create invite code
 
 	// Webhooks:
 	// POST /api/project/{project_id}/webhook - Creates a webhook
