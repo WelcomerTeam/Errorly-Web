@@ -434,8 +434,8 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 					ProjectIDs: make([]int64, 0),
 				}
 
-				token := CreateUserToken(user)
-				user.Token = token
+				uid, rand := CreateUserToken(user)
+				user.Token = rand
 
 				_, err = er.Postgres.Model(user).
 					WherePK().
@@ -444,7 +444,7 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 					http.Error(rw, err.Error(), http.StatusInternalServerError)
 				}
 
-				session.Values["token"] = token
+				session.Values["token"] = uid + "." + rand
 			} else {
 				http.Error(rw, err.Error(), http.StatusInternalServerError)
 
@@ -453,13 +453,13 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 		} else {
 			// When we have a valid account, we will create a new user
 			// token and update the username and avatar if necessary.
-			token := CreateUserToken(user)
+			uid, rand := CreateUserToken(user)
 
 			user.Avatar = "https://cdn.discordapp.com/avatars/" +
 				discordUserResponse.ID.String() + "/" +
 				discordUserResponse.Avatar + ".png?size=32"
 			user.Name = discordUserResponse.Username
-			user.Token = token
+			user.Token = rand
 
 			_, err = er.Postgres.Model(user).
 				WherePK().
@@ -467,7 +467,8 @@ func OAuthCallbackHandler(er *Errorly) http.HandlerFunc {
 			if err != nil {
 				http.Error(rw, err.Error(), http.StatusInternalServerError)
 			}
-			session.Values["token"] = token
+
+			session.Values["token"] = uid + "." + rand
 		}
 
 		// Once the user has logged in, send them back to the home page.

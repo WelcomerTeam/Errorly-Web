@@ -55,35 +55,30 @@ type DiscordUser struct {
 }
 
 // CreateUserToken creates a user token for a user.
-func CreateUserToken(u *structs.User) string {
+func CreateUserToken(u *structs.User) (string, string) {
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	res := make([]byte, 8)
 	binary.BigEndian.PutUint64(res, uint64(u.ID))
 
-	return base64.URLEncoding.EncodeToString(res) + "." + base64.URLEncoding.EncodeToString(b)
+	return base64.URLEncoding.EncodeToString(res), base64.URLEncoding.EncodeToString(b)
 }
 
 // ParseUserToken returns the user id and random.
-func ParseUserToken(token string) (uid int64, random []byte, valid bool) {
+func ParseUserToken(token string) (uid int64, random string, valid bool) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 {
-		return 0, nil, false
+		return 0, "", false
 	}
 
 	_uid, err := base64.URLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return 0, nil, false
+		return 0, "", false
 	}
 
 	uid = int64(binary.BigEndian.Uint64(_uid))
 
-	random, err = base64.URLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return 0, nil, false
-	}
-
-	return uid, random, true
+	return uid, parts[1], true
 }
 
 // AuthenticateSession verifies the session is valid.
@@ -93,7 +88,7 @@ func (er *Errorly) AuthenticateSession(session *sessions.Session) (auth bool, us
 		return false, nil
 	}
 
-	uid, _, valid := ParseUserToken(token)
+	uid, rand, valid := ParseUserToken(token)
 	if !valid {
 		return false, nil
 	}
@@ -107,7 +102,7 @@ func (er *Errorly) AuthenticateSession(session *sessions.Session) (auth bool, us
 		return false, nil
 	}
 
-	if _user.Token != token {
+	if _user.Token != rand {
 		return false, nil
 	}
 

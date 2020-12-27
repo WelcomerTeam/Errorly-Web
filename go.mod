@@ -13,7 +13,6 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/json-iterator/go v1.1.10
 	github.com/klauspost/compress v1.11.3 // indirect
-	// github.com/lithammer/fuzzysearch v1.1.1
 	github.com/rs/zerolog v1.20.0
 	github.com/savsgio/gotils v0.0.0-20200909101946-939aa3fc74fb
 	github.com/valyala/fasthttp v1.17.0
