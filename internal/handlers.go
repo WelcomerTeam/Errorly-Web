@@ -2372,7 +2372,7 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 
 // 		vars := mux.Vars(r)
 
-// 		invite_code, ok := vars["join_code"]
+// 		inviteCode, ok := vars["join_code"]
 // 		if !ok {
 // 			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
 // 			return
@@ -2395,7 +2395,7 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 
 // 		err = er.Postgres.Model(invite).
 // 			Where("invite.project_id = ?", project.ID).
-// 			Where("invite.code = ?", invite_code).
+// 			Where("invite.code = ?", inviteCode).
 // 			Select()
 // 		// if err != nil {
 // 		// }
@@ -2417,9 +2417,10 @@ func APIProjectInviteDeleteHandler(er *Errorly) http.HandlerFunc {
 
 		vars := mux.Vars(r)
 
-		invite_code, ok := vars["join_code"]
+		inviteCode, ok := vars["join_code"]
 		if !ok {
 			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
+
 			return
 		}
 
@@ -2427,6 +2428,7 @@ func APIProjectInviteDeleteHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 		if !auth {
 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
 			return
 		}
 
@@ -2455,19 +2457,17 @@ func APIProjectInviteDeleteHandler(er *Errorly) http.HandlerFunc {
 		invite := &structs.InviteCode{}
 
 		res, err := er.Postgres.Model(invite).
-			Where("code = ?", invite_code).
+			Where("code = ?", inviteCode).
 			Where("project_id = ?", project.ID).
 			Delete()
 		if err != nil {
 			if errors.Is(err, pg.ErrNoRows) {
-				ok = false
 				passResponse(rw, "Invalid invite code passed", false, http.StatusBadRequest)
 
 				return
 			}
 
 			// Unexpected error
-			ok = false
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
 			return
@@ -2495,6 +2495,7 @@ func APIProjectInviteCreateHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 		if !auth {
 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
 			return
 		}
 
