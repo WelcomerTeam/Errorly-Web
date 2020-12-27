@@ -2409,79 +2409,174 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 // 	}
 // }
 
-// // APIProjectInviteDeleteHandler handles deleting an invite.
-// func APIProjectInviteDeleteHandler(er *Errorly) http.HandlerFunc {
-// 	return func(rw http.ResponseWriter, r *http.Request) {
-// 		session, _ := er.Store.Get(r, sessionName)
-// 		defer er.SaveSession(session, r, rw)
+// APIProjectInviteDeleteHandler handles deleting an invite.
+func APIProjectInviteDeleteHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
 
-// 		vars := mux.Vars(r)
+		vars := mux.Vars(r)
 
-// 		// Authenticate the user
-// 		auth, user := er.AuthenticateSession(session)
-// 		if !auth {
-// 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
-// 			return
-// 		}
+		invite_code, ok := vars["join_code"]
+		if !ok {
+			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
+			return
+		}
 
-// 		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
-// 		if !ok {
-// 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
-// 			return
-// 		}
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+			return
+		}
 
-// 		if !viewable {
-// 			// No permission to view project. We will treat like the project
-// 			// does not exist.
-// 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
 
-// 			return
-// 		}
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
 
-// 		// check permissions
-// 		// remove invite
+			return
+		}
 
-// 	}
-// }
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
 
-// // APIProjectInviteCreateHandler handles creating an invite.
-// func APIProjectInviteCreateHandler(er *Errorly) http.HandlerFunc {
-// 	return func(rw http.ResponseWriter, r *http.Request) {
-// 		session, _ := er.Store.Get(r, sessionName)
-// 		defer er.SaveSession(session, r, rw)
+			return
+		}
 
-// 		vars := mux.Vars(r)
+		invite := &structs.InviteCode{}
 
-// 		// Authenticate the user
-// 		auth, user := er.AuthenticateSession(session)
-// 		if !auth {
-// 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
-// 			return
-// 		}
+		res, err := er.Postgres.Model(invite).
+			Where("code = ?", invite_code).
+			Where("project_id = ?", project.ID).
+			Delete()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				ok = false
+				passResponse(rw, "Invalid invite code passed", false, http.StatusBadRequest)
 
-// 		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
-// 		if !ok {
-// 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
-// 			return
-// 		}
+				return
+			}
 
-// 		if !viewable {
-// 			// No permission to view project. We will treat like the project
-// 			// does not exist.
-// 			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+			// Unexpected error
+			ok = false
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
-// 			return
-// 		}
+			return
+		}
 
-//	 	expiration: int in minutes for how long it lasts
-//		uses: int
+		if res.RowsAffected() == 0 {
+			passResponse(rw, "Invalid invite code passed", false, http.StatusBadRequest)
 
-// 		// parse form
-// 		// verify
-// 		// insert invite
+			return
+		}
 
-// 	}
-// }
+		passResponse(rw, "OK", true, http.StatusOK)
+	}
+}
+
+// APIProjectInviteCreateHandler handles creating an invite.
+func APIProjectInviteCreateHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		expiration, err := strconv.ParseInt(r.FormValue("expiration"), 10, 64)
+		if err != nil {
+			passResponse(rw, "Expiration argument is not valid", false, http.StatusBadRequest)
+
+			return
+		}
+
+		uses, err := strconv.ParseInt(r.FormValue("uses"), 10, 64)
+		if err != nil {
+			passResponse(rw, "Expiration argument is not valid", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if expiration < 0 || uses < 0 {
+			passResponse(rw, "Invalid argument for either expiration or uses", false, http.StatusBadRequest)
+
+			return
+		}
+
+		now := time.Now()
+
+		var expiresBy time.Time
+
+		if expiration > 0 {
+			expiresBy = now.Add(time.Duration(expiration) * time.Minute)
+		} else {
+			expiresBy = time.Unix(0, 0)
+		}
+
+		id := er.IDGen.GenerateID()
+
+		invite := structs.InviteCode{
+			ID:   id,
+			Code: idFromUInt64(uint64(id)),
+
+			CreatedAt:   now,
+			CreatedByID: user.ID,
+
+			Uses:    0,
+			MaxUses: uses,
+
+			ProjectID: project.ID,
+			ExpiresBy: expiresBy,
+		}
+
+		_, err = er.Postgres.Model(&invite).Insert()
+		if err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to insert invite")
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		passResponse(rw, invite, true, http.StatusOK)
+	}
+}
 
 // func Handler(er *Errorly) http.HandlerFunc {
 // 	return

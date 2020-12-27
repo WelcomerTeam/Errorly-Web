@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/andybalholm/brotli v1.0.1 // indirect
+	github.com/btcsuite/btcutil v1.0.2
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/derekstavis/go-qs v0.0.0-20180720192143-9eef69e6c4e7
 	github.com/go-pg/pg/v10 v10.7.3

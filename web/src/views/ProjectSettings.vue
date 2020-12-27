@@ -8,6 +8,60 @@
   <div v-else>
     <div
       class="modal fade"
+      id="createInviteModal"
+      tabindex="-1"
+      aria-labelledby="createInviteModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createInviteModal">Create Invite</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form-input
+              v-model="createInviteModal.expiration"
+              type="select"
+              label="Expire After"
+              class="mb-4"
+              :values="createInviteModal.expirationSelect"
+            />
+
+            <form-input
+              v-model="createInviteModal.uses"
+              type="select"
+              label="Max Number Of Uses"
+              :values="createInviteModal.usesSelect"
+            />
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-success"
+              @click="createInvite()"
+            >
+              Create Invite
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
       id="transferOwnershipModal"
       tabindex="-1"
       aria-labelledby="transferOwnershipModalLabel"
@@ -479,7 +533,7 @@
                 <button
                   class="btn text-dark"
                   type="button"
-                  @click="removeInvite(invite.id)"
+                  @click="removeInvite(invite.code)"
                 >
                   <svg-icon
                     type="mdi"
@@ -617,6 +671,29 @@ export default {
 
       contributorFilter: "",
 
+      createInviteModal: {
+        expiration: 0,
+        uses: 0,
+
+        expirationSelect: {
+          30: "30 minutes",
+          60: "1 hour",
+          360: "6 hours",
+          720: "12 hours",
+          1440: "1 day",
+          0: "Never",
+        },
+        usesSelect: {
+          0: "No limit",
+          1: "1 use",
+          5: "5 uses",
+          10: "10 uses",
+          25: "25 uses",
+          50: "50 uses",
+          100: "100 uses",
+        },
+      },
+
       deleteProjectModal: {
         _modal: undefined,
         target: this.$parent.project.settings.display_name,
@@ -684,10 +761,12 @@ export default {
     },
 
     showCreateInviteModal() {
-      this.showCreateInviteModal._modal = new Modal(
+      this.createInviteModal._modal = new Modal(
         document.getElementById("createInviteModal")
       );
-      this.showCreateInviteModal._modal.show();
+      this.createInviteModal.uses = 0;
+      this.createInviteModal.expiration = 0;
+      this.createInviteModal._modal.show();
     },
 
     transferOwnershipTo(contributor) {
@@ -797,28 +876,22 @@ export default {
         });
     },
 
-    removeInvite(id) {
+    removeInvite(code) {
       axios
-        .delete(
-          "/api/project/" + this.$route.params.id + "/invite/" + id + "/delete",
-          {
-            transformResponse: [(data) => jsonBig.parse(data)],
-          }
-        )
+        .delete("/api/project/" + this.$route.params.id + "/invite/" + code, {
+          transformResponse: [(data) => jsonBig.parse(data)],
+        })
         .then((result) => {
           var data = result.data;
           if (data.success) {
-            this.$bvToast.toast(
-              `Removed invite`,
-              {
-                title: "Removed invite",
-                appendToast: true,
-              }
-            )
+            this.$bvToast.toast(`Removed invite`, {
+              title: "Removed invite",
+              appendToast: true,
+            });
 
             var invites = [];
-            this.project.invite_codes.forEach(invite => {
-              if (invite.id !== id) {
+            this.project.invite_codes.forEach((invite) => {
+              if (invite.code !== code) {
                 invites.push(invite);
               }
             });
@@ -840,7 +913,7 @@ export default {
               appendToast: true,
             });
           }
-        })
+        });
     },
 
     createInvite() {
@@ -848,8 +921,8 @@ export default {
         .post(
           "/api/project/" + this.$route.params.id + "/invite",
           qs.stringify({
-            uses: this.showCreateInviteModal.uses,
-            expiration: this.showCreateInviteModal.expiration,
+            uses: this.createInviteModal.uses,
+            expiration: this.createInviteModal.expiration,
           }),
           {
             transformResponse: [(data) => jsonBig.parse(data)],
@@ -868,6 +941,7 @@ export default {
                 appendToast: true,
               }
             );
+            this.project.invite_codes.push(data.data);
           }
         })
         .catch((error) => {
@@ -887,7 +961,7 @@ export default {
           }
         })
         .finally(() => {
-          this.showCreateInviteModal._modal.hide();
+          this.createInviteModal._modal.hide();
         });
     },
 

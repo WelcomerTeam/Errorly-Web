@@ -166,9 +166,10 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// Invites:
 	// GET /api/project/{project_id}/join/{join_code} - Invite code page
 
-	// POST /api/project/{project_id}/invite/{join_code} - Use invite code
-	// DELETE /api/project/{project_id}/invite/{join_code} - Remove invite code
-	// POST /api/project/{project_id}/invite - Create invite code
+	router.HandleFunc("/api/project/{project_id}/invite/{join_code}", APIProjectInviteDeleteHandler(er), "DELETE")
+	// Remove invite code
+	router.HandleFunc("/api/project/{project_id}/invite", APIProjectInviteCreateHandler(er), "POST")
+	// Create invite code
 
 	// Webhooks:
 	// POST /api/project/{project_id}/webhook - Creates a webhook
