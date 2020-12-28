@@ -12,13 +12,11 @@
           :height="64"
           :path="mdiMailboxOpen"
         />
-        <h3>You have been invited to <b>{{ project }}</b></h3>
+        <h3>
+          You have been invited to <b>{{ project }}</b>
+        </h3>
 
-        <button
-          type="button"
-          class="btn btn-dark mt-5"
-          @click="acceptInvite()"
-        >
+        <button type="button" class="btn btn-dark mt-5" @click="acceptInvite()">
           Accept Invite
         </button>
       </div>
@@ -30,9 +28,7 @@
 import axios from "axios";
 import JSONBig from "json-bigint";
 import SvgIcon from "@jamescoyle/vue-icon";
-import {
-  mdiMailboxOpen,
-} from "@mdi/js";
+import { mdiMailboxOpen } from "@mdi/js";
 import Error from "@/components/Error.vue";
 var jsonBig = JSONBig({ storeAsString: true });
 
@@ -97,46 +93,52 @@ export default {
     },
     acceptInvite() {
       axios
-        .post("/api/project/" + this.$route.params.id + "/invite/" + this.$route.params.invite, {
-              transformResponse: [(data) => jsonBig.parse(data)],
-            })
-            .then((result) => {
-              var data = result.data;
-              if (data.success) {
-                this.$bvToast.toast(
-                  `You have joined this project. Redirecting you to the project...`,
-                  {
-                    title: "Invite accepted!",
-                    appendToast: true,
-                  }
-                );
-                this.$root.fetchMe();
-                setTimeout(() => {
-                  this.$router.push("/projects");
-                }, 3000);
-              } else {
-                this.$bvToast.toast(data.error, {
-                  title: "Failed to accept invite",
-                  appendToast: true,
-                });
+        .post(
+          "/api/project/" +
+            this.$route.params.id +
+            "/invite/" +
+            this.$route.params.invite,
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.$bvToast.toast(
+              `You have joined this project. Redirecting you to the project...`,
+              {
+                title: "Invite accepted!",
+                appendToast: true,
               }
-            })
-            .catch((error) => {
-              if (error.response?.data) {
-                this.$bvToast.toast(
-                  error.response.data.error || error.response.data,
-                  {
-                    title: "Failed to accept invite",
-                    appendToast: true,
-                  }
-                );
-              } else {
-                this.$bvToast.toast(error.text || error.toString(), {
-                  title: "Failed to accept invite",
-                  appendToast: true,
-                });
-              }
+            );
+            this.$root.fetchMe();
+            setTimeout(() => {
+              this.$router.push("/projects");
+            }, 3000);
+          } else {
+            this.$bvToast.toast(data.error, {
+              title: "Failed to accept invite",
+              appendToast: true,
             });
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to accept invite",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to accept invite",
+              appendToast: true,
+            });
+          }
+        });
     },
   },
 };

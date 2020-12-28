@@ -23,7 +23,6 @@ const CreateProjectIssue = () =>
 const ViewProjectIssue = () =>
   import(/* webpackChunkName: "project" */ "../views/ViewProjectIssue.vue");
 
-
 Vue.use(ToastPlugin);
 Vue.use(VueRouter);
 Vue.use(VueTimeAgo, {
