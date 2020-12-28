@@ -1231,7 +1231,32 @@ func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
 			return
 		}
 
-		// remove contributor then update
+		// Remove project from old contributors project list
+		contributorUser := structs.User{}
+		err = er.Postgres.Model(&contributorUser).
+			Where("id = ?", userID).
+			Select()
+		if err != nil {
+			er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
+		} else {
+			contributorUserProjectList := make([]int64, 0)
+			for _, projectID := range contributorUser.ProjectIDs {
+				if projectID != project.ID {
+					contributorUserProjectList = append(contributorUserProjectList, projectID)
+				}
+			}
+
+			contributorUser.ProjectIDs = contributorUserProjectList
+
+			_, err = er.Postgres.Model(&contributorUser).
+				WherePK().
+				Update()
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+				return
+			}
+		}
 
 		_contributors := []structs.User{}
 

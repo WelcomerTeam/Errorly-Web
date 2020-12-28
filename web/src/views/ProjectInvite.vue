@@ -112,7 +112,7 @@ export default {
                 );
                 this.$root.fetchMe();
                 setTimeout(() => {
-                  this.$router.push("/project/" + this.$route.params.id);
+                  this.$router.push("/projects");
                 }, 3000);
               } else {
                 this.$bvToast.toast(data.error, {
