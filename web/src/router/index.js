@@ -16,10 +16,13 @@ const ProjectIssues = () =>
   import(/* webpackChunkName: "project" */ "../views/ProjectIssues.vue");
 const ProjectSettings = () =>
   import(/* webpackChunkName: "project" */ "../views/ProjectSettings.vue");
+const ProjectInvite = () =>
+  import(/* webpackChunkName: "project" */ "../views/ProjectInvite.vue");
 const CreateProjectIssue = () =>
   import(/* webpackChunkName: "project" */ "../views/CreateProjectIssue.vue");
 const ViewProjectIssue = () =>
   import(/* webpackChunkName: "project" */ "../views/ViewProjectIssue.vue");
+
 
 Vue.use(ToastPlugin);
 Vue.use(VueRouter);
@@ -43,6 +46,11 @@ const routes = [
     path: "/project/create",
     name: "CreateProject",
     component: CreateProject,
+  },
+  {
+    path: "/project/:id/invite/:invite",
+    name: "ProjectInvite",
+    component: ProjectInvite,
   },
   {
     path: "/project/:id",

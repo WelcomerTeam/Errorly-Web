@@ -115,3 +115,9 @@ type APIProjectIssueComments struct {
 type APIProjectUpdate struct {
 	Settings ProjectSettings `json:"settings"`
 }
+
+// APIProjectInviteGet is the structure of the GET /api/project/{id}/invite/{code}
+type APIProjectInviteGet struct {
+	ValidInvite bool   `json:"valid_invite"`
+	ProjectName string `json:"project_name"`
+}

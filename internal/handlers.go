@@ -2365,50 +2365,173 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 	}
 }
 
-// // APIProjectInviteUseHandler handles a user joining an invite.
-// func APIProjectInviteUseHandler(er *Errorly) http.HandlerFunc {
-// 	return func(rw http.ResponseWriter, r *http.Request) {
-// 		session, _ := er.Store.Get(r, sessionName)
-// 		defer er.SaveSession(session, r, rw)
+// APIProjectInviteGetHandler handles retrieving an invite.
+func APIProjectInviteGetHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
 
-// 		vars := mux.Vars(r)
+		vars := mux.Vars(r)
 
-// 		inviteCode, ok := vars["join_code"]
-// 		if !ok {
-// 			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
-// 			return
-// 		}
+		inviteCode, ok := vars["join_code"]
+		if !ok {
+			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
 
-// 		// Authenticate the user
-// 		auth, user := er.AuthenticateSession(session)
-// 		if !auth {
-// 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
-// 			return
-// 		}
+			return
+		}
 
-// 		project, _, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
-// 		if !ok {
-// 			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
-// 			return
-// 		}
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
 
-// 		invite := &structs.InviteCode{}
+			return
+		}
 
-// 		err = er.Postgres.Model(invite).
-// 			Where("invite.project_id = ?", project.ID).
-// 			Where("invite.code = ?", inviteCode).
-// 			Select()
-// 		// if err != nil {
-// 		// }
+		project, _, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
 
-// 		// check if invite is legit (enough uses, not expired)
-// 		// increment 1 use and update
-// 		// add user to contributors
-// 		// update project contribuitors
-// 		// add project to users projects list
-// 		// update user
-// 	}
-// }
+		invite := &structs.InviteCode{}
+
+		err := er.Postgres.Model(invite).
+			Where("code = ?", inviteCode).
+			Where("project_id = ?", project.ID).
+			Select()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				passResponse(rw, "Invalid invite code passed", false, http.StatusBadRequest)
+
+				return
+			}
+
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		passResponse(rw, structs.APIProjectInviteGet{
+			ValidInvite: true,
+			ProjectName: project.Settings.DisplayName,
+		}, true, http.StatusOK)
+	}
+}
+
+// APIProjectInviteUseHandler handles a user joining an invite.
+func APIProjectInviteUseHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		inviteCode, ok := vars["join_code"]
+		if !ok {
+			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+			return
+		}
+
+		project, _, _, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if project.CreatedByID == user.ID {
+			passResponse(rw, "You are already in this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		for _, contributor := range project.Settings.ContributorIDs {
+			if contributor == user.ID {
+				passResponse(rw, "You are already in this project", false, http.StatusBadRequest)
+
+				return
+			}
+		}
+
+		invite := &structs.InviteCode{}
+
+		err := er.Postgres.Model(invite).
+			Where("project_id = ?", project.ID).
+			Where("code = ?", inviteCode).
+			Select()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				passResponse(rw, "Invalid invite code passed", false, http.StatusBadRequest)
+
+				return
+			}
+
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		// Check if the invite has enough uses or has expired, if so delete it.
+		if (invite.MaxUses > 0 && invite.Uses >= invite.MaxUses) ||
+			(!invite.ExpiresBy.IsZero() && time.Now().After(invite.ExpiresBy)) {
+			_, err = er.Postgres.Model(invite).WherePK().Delete()
+			if err != nil && !errors.Is(err, pg.ErrNoRows) {
+				// Unexpected error
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+				return
+			}
+
+			passResponse(rw, "Invalid invite code passed", false, http.StatusBadRequest)
+
+			return
+		}
+
+		// Increment invite uses
+		invite.Uses++
+
+		// Add user to contributors
+		project.Settings.ContributorIDs = append(project.Settings.ContributorIDs, user.ID)
+
+		// Add project to users project list
+		user.ProjectIDs = append(user.ProjectIDs, project.ID)
+
+		_, err = er.Postgres.Model(project).WherePK().Update()
+		if err != nil && !errors.Is(err, pg.ErrNoRows) {
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		_, err = er.Postgres.Model(invite).WherePK().Update()
+		if err != nil && !errors.Is(err, pg.ErrNoRows) {
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		_, err = er.Postgres.Model(user).WherePK().Update()
+		if err != nil && !errors.Is(err, pg.ErrNoRows) {
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		passResponse(rw, "OK", true, http.StatusOK)
+	}
+}
 
 // APIProjectInviteDeleteHandler handles deleting an invite.
 func APIProjectInviteDeleteHandler(er *Errorly) http.HandlerFunc {
@@ -2549,7 +2672,7 @@ func APIProjectInviteCreateHandler(er *Errorly) http.HandlerFunc {
 		if expiration > 0 {
 			expiresBy = now.Add(time.Duration(expiration) * time.Minute)
 		} else {
-			expiresBy = time.Unix(0, 0)
+			expiresBy = time.Time{}
 		}
 
 		id := er.IDGen.GenerateID()

@@ -158,9 +158,10 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
 	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
 
-	// Invites:
-	// GET /api/project/{project_id}/join/{join_code} - Invite code page
-
+	router.HandleFunc("/api/project/{project_id}/invite/{join_code}", APIProjectInviteGetHandler(er), "GET")
+	// Get invite code
+	router.HandleFunc("/api/project/{project_id}/invite/{join_code}", APIProjectInviteUseHandler(er), "POST")
+	// Use invite code
 	router.HandleFunc("/api/project/{project_id}/invite/{join_code}", APIProjectInviteDeleteHandler(er), "DELETE")
 	// Remove invite code
 	router.HandleFunc("/api/project/{project_id}/invite", APIProjectInviteCreateHandler(er), "POST")

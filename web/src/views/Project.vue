@@ -173,29 +173,32 @@ export default {
   name: "ProjectOverview",
   data() {
     return {
-      total_issues: 0,
-      page: this.$route.query.page || 0,
-      issue_query: this.$route.query.q || "",
-      issues: {},
+      mdiCamera,
+      mdiMapMarker,
+      mdiTray,
+      mdiTrayFull,
+      mdiTrayAlert,
+      mdiCogOutline,
+      mdiInformationOutline,
+
       contributors: {},
       contributors_loaded: false,
+
+      issues: {},
+      issue_error: undefined,
+      issues_loading: true,
+
+      page: this.$route.query.page || 0,
+      issue_query: this.$route.query.q || "",
+
+      total_issues: 0,
+      page_limit: 25,
 
       elevated: false,
       executing: false,
 
-      issue_error: undefined,
-      issues_loading: true,
-
-      page_limit: 25,
       error: undefined,
       project: undefined,
-      mdiCamera: mdiCamera,
-      mdiMapMarker: mdiMapMarker,
-      mdiTray: mdiTray,
-      mdiTrayFull: mdiTrayFull,
-      mdiTrayAlert: mdiTrayAlert,
-      mdiCogOutline: mdiCogOutline,
-      mdiInformationOutline: mdiInformationOutline,
     };
   },
   beforeRouteEnter(to, from, next) {
