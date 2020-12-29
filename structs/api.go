@@ -148,8 +148,8 @@ type ProjectSettings struct {
 	Private  bool `json:"private" pg:",use_zero"`  // If a project is private, users can only view
 	// it if they have been added as a contributor.
 
-	Limited        bool    `json:"limited" pg:",use_zero"` // When enabled, only contributes can create errors
-	ContributorIDs []int64 `json:"contributor_ids"`        // Contributors for project
+	Limited        bool    `json:"limited" pg:",use_zero"`        // When enabled, only contributes can create errors
+	ContributorIDs []int64 `json:"contributor_ids" pg:",notnull"` // Contributors for project
 }
 
 // Webhook contains the structure of a webhook integration.
