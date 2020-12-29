@@ -339,7 +339,7 @@
           class="pt-2"
           v-if="
             $parent.elevated ||
-            $parent.issues[issue.id].created_by == $root.user.id
+            ($root.user && $parent.issues[issue.id].created_by == $root.user.id)
           "
         >
           <button class="btn btn-dark" @click="deleteIssue()">
