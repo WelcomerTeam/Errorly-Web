@@ -8,6 +8,101 @@
   <div v-else>
     <div
       class="modal fade"
+      id="createIntegrationModal"
+      tabindex="-1"
+      aria-labelledby="createIntegrationModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createIntegrationModal">
+              Create Integration
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form-input
+              v-model="createIntegrationModal.name"
+              type="text"
+              label="Name"
+              class="mb-4"
+            />
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-success"
+              @click="createIntegration()"
+              :disabled="this.createIntegrationModal.name.trim().length < 3"
+            >
+              Create Integration
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="removeIntegrationModal"
+      tabindex="-1"
+      aria-labelledby="removeIntegrationModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="removeIntegrationModal">
+              Remove Integration?
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Are you sure you want to delete the
+              <b>{{ removeIntegrationModal._integration_name }}</b> integration?
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              @click="removeIntegration(removeIntegrationModal.target)"
+            >
+              Remove Integration
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
       id="createInviteModal"
       tabindex="-1"
       aria-labelledby="createInviteModalLabel"
@@ -128,7 +223,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="removeContributorModalModal">
+            <h5 class="modal-title" id="removeContributorModal">
               Remove Contributor?
             </h5>
             <button
@@ -553,6 +648,118 @@
         role="tabpanel"
         aria-labelledby="v-pills-integrations-tab"
       >
+        <div class="d-flex pb-3 border-bottom border-muted">
+          <div
+            class="input-group input-group-sm border border-secondary rounded mr-3"
+          >
+            <!-- <button class=" btn" type="button" id="search-submit" aria-label="Search">
+              <svg-icon type="mdi" :width="21" :height="21" :path="mdiMagnify" />
+            </button> -->
+            <input
+              type="text"
+              class="form-control border-white"
+              placeholder="Filter integrations by..."
+              aria-label="Search"
+              aria-describedby="search-submit"
+              v-model="integrationFilter"
+            />
+            <button
+              class="btn"
+              type="button"
+              id="search-clear"
+              aria-label="Empty query"
+              @click="integrationFilter = ''"
+            >
+              <svg-icon
+                type="mdi"
+                :width="21"
+                :height="21"
+                :path="mdiCloseCircleOutline"
+              />
+            </button>
+          </div>
+          <button
+            class="btn btn-success w-100"
+            @click="showCreateIntegrationModal()"
+          >
+            Create Integration
+          </button>
+        </div>
+
+        <table class="table table-borderless table-hover d-table">
+          <tbody>
+            <tr
+              v-for="(integration, index) in this.filterIntegrations"
+              v-bind:key="index"
+              class="list-group-item d-table-row card text-left py-3 border-bottom border-muted border-top-0 border-left-0 border-right-0"
+            >
+              <th class="ticket-status" colspan="8">
+                <img
+                  :src="
+                    integration.avatar
+                      ? integration.avatar
+                      : '/img/integration.png'
+                  "
+                  class="rounded-circle"
+                  width="32"
+                  height="32"
+                  alt="Profile picture"
+                />
+                <span class="contributor-name ml-2 align-middle">
+                  {{ integration.name }}
+                </span>
+              </th>
+              <th class="text-right align-middle" colspan="4">
+                <div class="dropdown">
+                  <button
+                    class="btn text-dark"
+                    type="button"
+                    id="dropdownMenuButton"
+                    data-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    <svg-icon
+                      type="mdi"
+                      width="20"
+                      height="20"
+                      :path="mdiDotsVertical"
+                    />
+                  </button>
+                  <ul
+                    class="dropdown-menu"
+                    aria-labelledby="dropdownMenuButton"
+                  >
+                    <li>
+                      <a
+                        class="dropdown-item user-select-none pe-auto"
+                        @click="regenerateToken(integration)"
+                        >Regenerate Token</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        class="dropdown-item user-select-none pe-auto"
+                        @click="copyToken(integration)"
+                        >Copy Token</a
+                      >
+                    </li>
+                    <li>
+                      <hr class="dropdown-divider" />
+                    </li>
+                    <li>
+                      <a
+                        class="dropdown-item user-select-none pe-auto"
+                        @click="showRemoveIntegrationModal(integration)"
+                        >Delete Integration</a
+                      >
+                    </li>
+                  </ul>
+                </div>
+              </th>
+            </tr>
+          </tbody>
+        </table>
+
         <pre>
           /api/project/{project_id}/integrations
             - GET  - get integration
@@ -670,6 +877,7 @@ export default {
       project: JSON.parse(JSON.stringify(this.$parent.project)),
 
       contributorFilter: "",
+      integrationFilter: "",
 
       createInviteModal: {
         expiration: 0,
@@ -694,15 +902,25 @@ export default {
         },
       },
 
-      deleteProjectModal: {
+      createIntegrationModal: {
         _modal: undefined,
-        target: this.$parent.project.settings.display_name,
-        confirm: "",
+        name: "",
+      },
+
+      removeIntegrationModal: {
+        _modal: undefined,
+        _integration_name: undefined,
+        target: undefined,
       },
 
       removeContributorModal: {
         _modal: undefined,
         target: undefined,
+      },
+
+      deleteProjectModal: {
+        _modal: undefined,
+        target: this.$parent.project.settings.display_name,
         confirm: "",
       },
 
@@ -727,6 +945,19 @@ export default {
 
       return contributors.filter((object) => {
         return this.$parent.getUsername(object).toLowerCase().includes(filter);
+      });
+    },
+
+    filterIntegrations() {
+      var integrations = this.project.integrations;
+
+      if (this.integrationFilter == "") {
+        return integrations;
+      }
+      var filter = this.integrationFilter.toLowerCase();
+
+      return integrations.filter((object) => {
+        return object.name.toLowerCase().includes(filter);
       });
     },
   },
@@ -767,6 +998,212 @@ export default {
       this.createInviteModal.uses = 0;
       this.createInviteModal.expiration = 0;
       this.createInviteModal._modal.show();
+    },
+
+    showCreateIntegrationModal() {
+      this.createIntegrationModal._modal = new Modal(
+        document.getElementById("createIntegrationModal")
+      );
+      this.createIntegrationModal.name = "";
+      this.createIntegrationModal._modal.show();
+    },
+
+    showRemoveIntegrationModal(integration) {
+      this.removeIntegrationModal._modal = new Modal(
+        document.getElementById("removeIntegrationModal")
+      );
+      this.removeIntegrationModal._integration_name = integration.name;
+      this.removeIntegrationModal.target = integration.id;
+      this.removeIntegrationModal._modal.show();
+    },
+
+    copyText: function (text) {
+      var elem = document.createElement("textarea");
+      elem.value = text;
+      // elem.type = "hidden";
+      document.body.append(elem);
+
+      elem.select();
+      elem.setSelectionRange(0, 99999);
+
+      document.execCommand("copy");
+      elem.parentElement.removeChild(elem);
+    },
+
+    removeIntegration(id) {
+      axios
+        .delete(
+          "/api/project/" + this.$route.params.id + "/integration/" + id,
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.project.integrations = this.project.integrations.filter(
+              (object) => {
+                return object.id != id;
+              }
+            );
+            this.$bvToast.toast(`Successfuly deleted integration`, {
+              title: "Deleted integration",
+              appendToast: true,
+            });
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to delete integration",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to delete integration",
+              appendToast: true,
+            });
+          }
+        });
+    },
+
+    copyToken(integration) {
+      axios
+        .get(
+          "/api/project/" +
+            this.$route.params.id +
+            "/integration/" +
+            integration.id +
+            "/token",
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.copyText(data.data);
+            this.$bvToast.toast(`Copied integration token into clipboard`, {
+              title: "Successfuly got integration token",
+              appendToast: true,
+            });
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to get integration token",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to get integration token",
+              appendToast: true,
+            });
+          }
+        });
+    },
+
+    regenerateToken(integration) {
+      axios
+        .post(
+          "/api/project/" +
+            this.$route.params.id +
+            "/integration/" +
+            integration.id +
+            "/regenerate",
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.$bvToast.toast(
+              `Select integration and click copy text to get it`,
+              {
+                title: "Successfuly regenerated token",
+                appendToast: true,
+              }
+            );
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to regenerate integration token",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to regenerate integration token",
+              appendToast: true,
+            });
+          }
+        });
+    },
+
+    createIntegration() {
+      axios
+        .post(
+          "/api/project/" + this.$route.params.id + "/integration",
+          qs.stringify({
+            display_name: this.createIntegrationModal.name,
+          }),
+          {
+            transformResponse: [(data) => jsonBig.parse(data)],
+            headers: {
+              "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+            },
+          }
+        )
+        .then((result) => {
+          var data = result.data;
+          if (data.success) {
+            this.$bvToast.toast(`Created new integration`, {
+              title: "Successfully created integration",
+              appendToast: true,
+            });
+            this.project.integrations.shift(data.data);
+          }
+        })
+        .catch((error) => {
+          if (error.response?.data) {
+            this.$bvToast.toast(
+              error.response.data.error || error.response.data,
+              {
+                title: "Failed to create integration",
+                appendToast: true,
+              }
+            );
+          } else {
+            this.$bvToast.toast(error.text || error.toString(), {
+              title: "Failed to create integration",
+              appendToast: true,
+            });
+          }
+        })
+        .finally(() => {
+          this.createIntegrationModal._modal.hide();
+        });
     },
 
     transferOwnershipTo(contributor) {

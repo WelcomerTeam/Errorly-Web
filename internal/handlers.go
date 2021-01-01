@@ -1,6 +1,8 @@
 package errorly
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/csv"
 	"errors"
 	"io/ioutil"
@@ -2508,7 +2510,9 @@ func APIProjectInviteUseHandler(er *Errorly) http.HandlerFunc {
 		// Check if the invite has enough uses or has expired, if so delete it.
 		if (invite.MaxUses > 0 && invite.Uses >= invite.MaxUses) ||
 			(!invite.ExpiresBy.IsZero() && time.Now().After(invite.ExpiresBy)) {
-			_, err = er.Postgres.Model(invite).WherePK().Delete()
+			_, err = er.Postgres.Model(invite).
+				WherePK().
+				Delete()
 			if err != nil && !errors.Is(err, pg.ErrNoRows) {
 				// Unexpected error
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
@@ -2725,6 +2729,304 @@ func APIProjectInviteCreateHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		passResponse(rw, invite, true, http.StatusOK)
+	}
+}
+
+// APIProjectIntegrationCreate handles creating an integration.
+func APIProjectIntegrationCreate(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		integrationName := r.FormValue("display_name")
+		if len(integrationName) < 3 {
+			passResponse(rw, "Invalid name was passed", false, http.StatusBadRequest)
+
+			return
+		}
+
+		integration := &structs.User{
+			ID:   er.IDGen.GenerateID(),
+			Name: integrationName,
+
+			UserType: structs.IntegrationUser,
+
+			CreatedAt: time.Now().UTC(),
+
+			ProjectID:   project.ID,
+			CreatedByID: user.ID,
+			Integration: true,
+		}
+
+		_, rand := CreateUserToken(integration)
+		integration.Token = rand
+
+		_, err := er.Postgres.Model(integration).
+			Insert()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+		}
+
+		passResponse(rw, integration, true, http.StatusOK)
+	}
+}
+
+// APIProjectIntegrationDelete handles deleting an integration.
+func APIProjectIntegrationDelete(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		integrationID, ok := vars["integration_id"]
+		if !ok {
+			passResponse(rw, "No integration id supplied", false, http.StatusBadRequest)
+
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		_, err := er.Postgres.Model(&structs.User{}).
+			Where("id = ?", integrationID).
+			Where("project_id = ?", project.ID).
+			Where("user_type = ?", structs.IntegrationUser).
+			Delete()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				passResponse(rw, "Invalid integration id passed", false, http.StatusBadRequest)
+
+				return
+			}
+
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		passResponse(rw, "OK", true, http.StatusOK)
+	}
+}
+
+// APIProjectIntegrationRegenerate handles regenerating an integration token.
+func APIProjectIntegrationRegenerate(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		integrationID, ok := vars["integration_id"]
+		if !ok {
+			passResponse(rw, "No integration id supplied", false, http.StatusBadRequest)
+
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		integration := &structs.User{}
+
+		err := er.Postgres.Model(integration).
+			Where("id = ?", integrationID).
+			Where("project_id = ?", project.ID).
+			Where("user_type = ?", structs.IntegrationUser).
+			Select()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				// Invalid project ID
+				ok = false
+				passResponse(rw, "Could not find this integration", false, http.StatusBadRequest)
+
+				return
+			}
+
+			// Unexpected error
+			ok = false
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		_, rand := CreateUserToken(integration)
+		integration.Token = rand
+
+		_, err = er.Postgres.Model(integration).
+			WherePK().
+			Update()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		passResponse(rw, integration, true, http.StatusOK)
+	}
+}
+
+// APIProjectIntegrationTokenHandler handles returning an integration token.
+func APIProjectIntegrationTokenHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		integrationID, ok := vars["integration_id"]
+		if !ok {
+			passResponse(rw, "No integration id supplied", false, http.StatusBadRequest)
+
+			return
+		}
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		integration := &structs.User{}
+
+		err := er.Postgres.Model(integration).
+			Where("id = ?", integrationID).
+			Where("project_id = ?", project.ID).
+			Where("user_type = ?", structs.IntegrationUser).
+			Select()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				// Invalid project ID
+				ok = false
+				passResponse(rw, "Could not find this integration", false, http.StatusBadRequest)
+
+				return
+			}
+
+			// Unexpected error
+			ok = false
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		res := make([]byte, 8)
+		binary.BigEndian.PutUint64(res, uint64(integration.ID))
+		token := base64.URLEncoding.EncodeToString(res) + "." + integration.Token
+
+		passResponse(rw, token, true, http.StatusOK)
 	}
 }
 

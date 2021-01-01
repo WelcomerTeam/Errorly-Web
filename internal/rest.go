@@ -174,10 +174,14 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// POST /api/project/{project_id}/webhook/{webhook_id}/test - Tests webhook
 
 	// Integrations:
-	// POST /api/project/{project_id}/integration - Creates an integration
-	// PATCH /api/project/{project_id}/integration - Updates an integration
-	// DELETE /api/project/{project_id}/integration - Deletes an integration
-	// POST /api/project/{project_id}/integration/{integration_id}/regenerate - Creates a new integration token
+	router.HandleFunc("/api/project/{project_id}/integration", APIProjectIntegrationCreate(er), "POST")
+	// Creates an integration
+	router.HandleFunc("/api/project/{project_id}/integration/{integration_id}", APIProjectIntegrationDelete(er), "DELETE")
+	// Deletes an integration
+	router.HandleFunc("/api/project/{project_id}/integration/{integration_id}/regenerate", APIProjectIntegrationRegenerate(er), "POST")
+	// Regenerates the token for an integration
+	router.HandleFunc("/api/project/{project_id}/integration/{integration_id}/token", APIProjectIntegrationTokenHandler(er), "GET")
+	// Returns the token for an integration
 
 	return router
 }
