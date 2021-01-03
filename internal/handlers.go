@@ -1021,9 +1021,9 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 						passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
 						return
-					} else {
-						issue.Assignee = assignee
 					}
+
+					issue.Assignee = assignee
 				}
 			case structs.ActionLockComments:
 				issue.CommentsLocked = locking

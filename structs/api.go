@@ -17,7 +17,7 @@ const (
 	IntegrationUser
 )
 
-// WebhookEventType signifies what type of event occured for the webhook
+// WebhookEventType signifies what type of event occurred for the webhook
 type WebhookEventType uint8
 
 const (

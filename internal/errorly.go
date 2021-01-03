@@ -373,9 +373,9 @@ func (er *Errorly) HandleProjectWebhook(project *structs.Project, payload struct
 func cutString(s string, l int) string {
 	if len(s) < l {
 		return s
-	} else {
-		return s[0:l] + "..."
 	}
+
+	return s[0:l] + "..."
 }
 
 // ConvertErrorlyToDiscordWebhook handles converting a default payload to a
@@ -442,19 +442,19 @@ func (er *Errorly) ConvertErrorlyToDiscordWebhook(payload structs.WebhookMessage
 					},
 				},
 			}
-		} else {
-			return true, sandwich.WebhookMessage{
-				Embeds: []sandwich.Embed{
-					{
-						Title: fmt.Sprintf("[%s] Issue %s assigned to %s", payload.Project.Settings.DisplayName, payload.Issue.Error, payload.Issue.Assignee.Name),
-						URL:   fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
-						Author: &sandwich.EmbedAuthor{
-							Name:    payload.Author.Name,
-							IconURL: payload.Author.Avatar,
-						},
+		}
+
+		return true, sandwich.WebhookMessage{
+			Embeds: []sandwich.Embed{
+				{
+					Title: fmt.Sprintf("[%s] Issue %s assigned to %s", payload.Project.Settings.DisplayName, payload.Issue.Error, payload.Issue.Assignee.Name),
+					URL:   fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+					Author: &sandwich.EmbedAuthor{
+						Name:    payload.Author.Name,
+						IconURL: payload.Author.Avatar,
 					},
 				},
-			}
+			},
 		}
 	case structs.IssueLocked:
 		var issueLockedString string
@@ -538,7 +538,7 @@ func (er *Errorly) ExecuteWebhook(webhook *structs.Webhook, body io.Reader, secr
 		return false, xerrors.Errorf("failed to create request: %w", err)
 	}
 
-	// At the moent all requests will be of JSON content
+	// At the moment all requests will be of JSON content
 	// if webhook.Type == structs.DiscordWebhook || webhook.JSONContent {
 	// }
 	req.Header.Set("Content-Type", "application/json")
