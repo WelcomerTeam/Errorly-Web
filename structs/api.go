@@ -17,6 +17,30 @@ const (
 	IntegrationUser
 )
 
+// WebhookEventType signifies what type of event occured for the webhook
+type WebhookEventType uint8
+
+const (
+	// IssueCreate signifies a new issue was made. The project,
+	// issue ands author are attached.
+	IssueCreate WebhookEventType = iota
+	// IssueComment signifies a user sent a new comment. The
+	// project, issue, author and comment are attached.
+	IssueComment
+	// IssueStarred signifies a message was starred/unstarred.
+	// The project, issue and author are attached.
+	IssueStarred
+	// IssueAssigned signifies a user was assigned to an issue.
+	// The project, issue, author and assignee are attached.
+	IssueAssigned
+	// IssueLocked signifies comments on an issue was locked/unlocked.
+	// The project, issue and author are attached.
+	IssueLocked
+	// IssueMarkStatus signifies the status of an issue has changed.
+	// The project, issue and invoauthorkee are attached.
+	IssueMarkStatus
+)
+
 // WebhookType signifies how the payload should be sent.
 type WebhookType uint8
 
@@ -60,13 +84,13 @@ const (
 func (eT EntryType) String() string {
 	switch eT {
 	case EntryActive:
-		return "EntryActive"
+		return "active"
 	case EntryOpen:
-		return "EntryOpen"
+		return "open"
 	case EntryInvalid:
-		return "EntryInvalid"
+		return "invalid"
 	case EntryResolved:
-		return "EntryResolved"
+		return "resolved"
 	}
 
 	return ""
@@ -230,4 +254,15 @@ type InviteCode struct {
 
 	ProjectID int64     `json:"project_id"`
 	ExpiresBy time.Time `json:"expires_by" pg:",use_zero"`
+}
+
+// WebhookMessage is the generic payload for all webhook messages.
+type WebhookMessage struct {
+	Type WebhookEventType `json:"type"`
+
+	Project *Project    `json:"project,omitempty"`
+	Issue   *IssueEntry `json:"issue,omitempty"`
+	Comment *Comment    `json:"comment,omitempty"`
+
+	Author *User `json:"author,omitempty"`
 }

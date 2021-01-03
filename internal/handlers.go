@@ -100,12 +100,12 @@ func verifyProjectVisibility(er *Errorly, rw http.ResponseWriter, vars map[strin
 
 	query := er.Postgres.Model(project).
 		Where("project.id = ?", projectID).
-		Relation("Integrations")
+		Relation("Integrations").
+		Relation("Webhooks")
 
-	// If we do not want a basic config, we will also pass webhooks and invite codes.
+	// If we do not want a basic config, we will also pass invite codes.
 	if !basic {
 		query = query.
-			Relation("Webhooks").
 			Relation("InviteCodes")
 	}
 
@@ -929,11 +929,13 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 		for _, issueID := range issueIDs {
 			// Fetch the request
 			issue := structs.IssueEntry{}
-			err = er.Postgres.Model(&issue).
-				Where("project_id = ?", project.ID).
-				Where("id = ?", issueID).
-				Select() // TODO: convert this to a single request
+			origionalIssue := structs.IssueEntry{}
 
+			err = er.Postgres.Model(&issue).
+				Where("issue_entry.project_id = ?", project.ID).
+				Where("issue_entry.id = ?", issueID).
+				Relation("Assignee").
+				Select() // TODO: convert this to a single request
 			if err != nil {
 				if errors.Is(err, pg.ErrNoRows) {
 					// Invalid issue ID
@@ -946,6 +948,22 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 
 				return
 			}
+
+			bytes, err := json.Marshal(issue)
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+				return
+			}
+
+			err = json.Unmarshal(bytes, &origionalIssue)
+			if err != nil {
+				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+				return
+			}
+
+			println("B", issue.AssigneeID, origionalIssue.AssigneeID)
 
 			// Handle action passed
 			switch action {
@@ -982,6 +1000,30 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 					issue.AssigneeID = assigneeID
 				} else if issue.AssigneeID == assigneeID {
 					issue.AssigneeID = 0
+				}
+
+				if issue.AssigneeID == 0 {
+					issue.Assignee = nil
+				} else {
+					assignee := &structs.User{}
+
+					err = er.Postgres.Model(assignee).
+						Where("id = ?", issue.AssigneeID).
+						Select()
+					if err != nil {
+						if xerrors.Is(err, pg.ErrNoRows) {
+							issue.Assignee = &structs.User{
+								Name: "Unknown",
+								ID:   issue.AssigneeID,
+							}
+						}
+
+						passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+						return
+					} else {
+						issue.Assignee = assignee
+					}
 				}
 			case structs.ActionLockComments:
 				issue.CommentsLocked = locking
@@ -1065,6 +1107,54 @@ func APIProjectExecutorHandler(er *Errorly) http.HandlerFunc {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
 				return
+			}
+
+			if issue.Starred != origionalIssue.Starred {
+				err = er.HandleProjectWebhook(project, structs.WebhookMessage{
+					Type:    structs.IssueStarred,
+					Project: project,
+					Issue:   &issue,
+					Author:  user,
+				})
+				if err != nil {
+					er.Logger.Warn().Err(err).Msg("Failed to handle project webhook")
+				}
+			}
+
+			if issue.AssigneeID != origionalIssue.AssigneeID {
+				err = er.HandleProjectWebhook(project, structs.WebhookMessage{
+					Type:    structs.IssueAssigned,
+					Project: project,
+					Issue:   &issue,
+					Author:  user,
+				})
+				if err != nil {
+					er.Logger.Warn().Err(err).Msg("Failed to handle project webhook")
+				}
+			}
+
+			if issue.CommentsLocked != origionalIssue.CommentsLocked {
+				err = er.HandleProjectWebhook(project, structs.WebhookMessage{
+					Type:    structs.IssueLocked,
+					Project: project,
+					Issue:   &issue,
+					Author:  user,
+				})
+				if err != nil {
+					er.Logger.Warn().Err(err).Msg("Failed to handle project webhook")
+				}
+			}
+
+			if issue.Type != origionalIssue.Type {
+				err = er.HandleProjectWebhook(project, structs.WebhookMessage{
+					Type:    structs.IssueMarkStatus,
+					Project: project,
+					Issue:   &issue,
+					Author:  user,
+				})
+				if err != nil {
+					er.Logger.Warn().Err(err).Msg("Failed to handle project webhook")
+				}
 			}
 
 			issues = append(issues, issue)
@@ -1955,6 +2045,16 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 
 				return
 			}
+
+			err = er.HandleProjectWebhook(project, structs.WebhookMessage{
+				Type:    structs.IssueCreate,
+				Project: project,
+				Issue:   issue,
+				Author:  user,
+			})
+			if err != nil {
+				er.Logger.Warn().Err(err).Msg("Failed to handle project webhook")
+			}
 		} else {
 			// An error with this function and error already exists, increment it again
 			issue.Occurrences++
@@ -1995,6 +2095,16 @@ func APIProjectIssueCreateHandler(er *Errorly) http.HandlerFunc {
 				passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
 				return
+			}
+
+			err = er.HandleProjectWebhook(project, structs.WebhookMessage{
+				Type:    structs.IssueCreate,
+				Project: project,
+				Issue:   issue,
+				Author:  user,
+			})
+			if err != nil {
+				er.Logger.Warn().Err(err).Msg("Failed to handle project webhook")
 			}
 		}
 
@@ -2386,6 +2496,17 @@ func APIProjectIssueCommentCreateHandler(er *Errorly) http.HandlerFunc {
 			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
 
 			return
+		}
+
+		err = er.HandleProjectWebhook(project, structs.WebhookMessage{
+			Type:    structs.IssueComment,
+			Project: project,
+			Issue:   issue,
+			Author:  user,
+			Comment: comment,
+		})
+		if err != nil {
+			er.Logger.Warn().Err(err).Msg("Failed to handle project webhook")
 		}
 
 		passResponse(rw, comment, true, http.StatusOK)
@@ -3027,6 +3148,100 @@ func APIProjectIntegrationTokenHandler(er *Errorly) http.HandlerFunc {
 		token := base64.URLEncoding.EncodeToString(res) + "." + integration.Token
 
 		passResponse(rw, token, true, http.StatusOK)
+	}
+}
+
+// APIProjectWebhookCreateHandler handles creating a webhook.
+func APIProjectWebhookCreateHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		webhookURL, err := url.Parse(r.FormValue("url"))
+		if err != nil {
+			passResponse(rw, "Webhook url is not valid", false, http.StatusBadRequest)
+
+			return
+		}
+
+		webhookSecret := r.FormValue("secret")
+
+		useJson, err := strconv.ParseBool(r.FormValue("use_json"))
+		if err != nil {
+			passResponse(rw, "Passed use_json value is not valid", false, http.StatusBadRequest)
+
+			return
+		}
+
+		webhookDiscord, err := strconv.ParseBool(r.FormValue("webhook_discord"))
+		if err != nil {
+			passResponse(rw, "Passed webhook_discord value is not valid", false, http.StatusBadRequest)
+
+			return
+		}
+
+		var webhookType structs.WebhookType
+		if webhookDiscord {
+			webhookType = structs.RegularPayload
+		} else {
+			webhookType = structs.DiscordWebhook
+		}
+
+		webhook := &structs.Webhook{
+			ID:        er.IDGen.GenerateID(),
+			ProjectID: project.ID,
+
+			CreatedAt:   time.Now().UTC(),
+			CreatedByID: user.ID,
+
+			Secret:      webhookSecret,
+			URL:         webhookURL.String(),
+			Type:        webhookType,
+			JSONContent: useJson,
+			Active:      true,
+
+			Failures: 0,
+		}
+
+		_, err = er.Postgres.Model(webhook).
+			Insert()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+		}
+
+		passResponse(rw, webhook, true, http.StatusOK)
 	}
 }
 

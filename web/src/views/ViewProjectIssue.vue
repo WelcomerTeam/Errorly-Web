@@ -65,8 +65,10 @@
         <span class="dot-right">
           <span class="text-muted">
             <span class="text-body">{{
-              $parent.getUsername($parent.issues[issue_id].created_by_id) ||
-              "ghost"
+              $parent.getUsername(
+                $parent.issues[issue_id].created_by_id,
+                "ghost"
+              )
             }}</span>
             <span
               class="badge rounded-pill bg-primary ml-1"
@@ -101,8 +103,10 @@
             Assigned to
             <span class="text-body">
               {{
-                $parent.getUsername($parent.issues[issue_id].assignee_id) ||
-                "ghost"
+                $parent.getUsername(
+                  $parent.issues[issue_id].assignee_id,
+                  "ghost"
+                )
               }}
             </span>
           </span>
@@ -119,8 +123,10 @@
           <div class="card ml-3" style="align-items: stretch; width: 100%">
             <div class="card-header text-black-50">
               <b class="text-dark">{{
-                $parent.getUsername($parent.issues[issue_id].created_by_id) ||
-                "ghost"
+                $parent.getUsername(
+                  $parent.issues[issue_id].created_by_id,
+                  "ghost"
+                )
               }}</b>
               <span
                 class="badge rounded-pill bg-primary ml-1"
@@ -156,7 +162,7 @@
             <div class="card ml-3" style="align-items: stretch; width: 100%">
               <div class="card-header text-black-50 comment-text">
                 <b class="text-dark">{{
-                  $parent.getUsername(comment.created_by_id) || "ghost"
+                  $parent.getUsername(comment.created_by_id, "ghost")
                 }}</b>
                 commented
                 <timeago
@@ -192,9 +198,7 @@
                   :includeSeconds="true"
                 />
                 by
-                <b>{{
-                  $parent.getUsername(comment.created_by_id) || "ghost"
-                }}</b>
+                <b>{{ $parent.getUsername(comment.created_by_id, "ghost") }}</b>
               </div>
             </div>
           </div>
@@ -219,9 +223,7 @@
                   :includeSeconds="true"
                 />
                 by
-                <b>{{
-                  $parent.getUsername(comment.created_by_id) || "ghost"
-                }}</b>
+                <b>{{ $parent.getUsername(comment.created_by_id, "ghost") }}</b>
               </div>
             </div>
           </div>
@@ -426,7 +428,7 @@
             class="btn btn-outline-secondary btn-sm"
             aria-label="Execute actions"
             @click="
-              $parent.execute(marked, [$route.params.issueid]);
+              $parent.execute(marked, [$route.params.issueid], undefined);
               fetchComments(comments_page);
             "
             :disabled="

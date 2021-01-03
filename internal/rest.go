@@ -158,6 +158,7 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// PATCH /api/project/{project_id}/issue/{issue_id}/comments - Updates issue comment
 	// DELETE /api/project/{project_id}/issue/{issue_id}/comments - Deletes issue comment
 
+	// Invites:
 	router.HandleFunc("/api/project/{project_id}/invite/{join_code}", APIProjectInviteGetHandler(er), "GET")
 	// Get invite code
 	router.HandleFunc("/api/project/{project_id}/invite/{join_code}", APIProjectInviteUseHandler(er), "POST")
@@ -168,10 +169,14 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// Create invite code
 
 	// Webhooks:
-	// POST /api/project/{project_id}/webhook - Creates a webhook
+	router.HandleFunc("/api/project/{project_id}/webhook", APIProjectWebhookCreateHandler(er), "POST")
+	// Creates a webhook
+	// router.HandleFunc("/api/project/{project_id}/webhook/{webhook_id}", APIProjectWebhookDeleteHandler(er), "DELETE")
+	// Deletes a webhook
+	// router.HandleFunc("/api/project/{project_id}/webhook/{webhook_id}/test", APIProjectWebhookTestHandler(er), "POST")
+	// Tests webhook
+
 	// PATCH /api/project/{project_id}/webhook/{webhook_id} - Updates a webhook
-	// DELETE /api/project/{project_id}/webhook/{webhook_id} - Deletes a webhook
-	// POST /api/project/{project_id}/webhook/{webhook_id}/test - Tests webhook
 
 	// Integrations:
 	router.HandleFunc("/api/project/{project_id}/integration", APIProjectIntegrationCreate(er), "POST")

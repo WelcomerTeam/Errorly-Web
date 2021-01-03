@@ -258,7 +258,7 @@
                       aria-expanded="false"
                       aria-label="Select user to assign/deassign"
                     >
-                      {{ $parent.getUsername(this.assigned) || "Nobody" }}
+                      {{ $parent.getUsername(this.assigned, "Nobody") }}
                     </button>
                     <ul class="dropdown-menu">
                       <li>
@@ -298,7 +298,13 @@
                   <button
                     class="btn btn-outline-secondary btn-sm"
                     aria-label="Execute actions"
-                    @click="$parent.execute(marked, $parent.getCheckedIssues())"
+                    @click="
+                      $parent.execute(
+                        marked,
+                        $parent.getCheckedIssues(),
+                        assigned
+                      )
+                    "
                     :disabled="
                       marked == 'none' ||
                       ((marked == 'assign' || marked == 'deassign') &&
@@ -403,7 +409,7 @@
                       :includeSeconds="true"
                     />
                     by
-                    {{ $parent.getUsername(issue.created_by_id) || "ghost" }}
+                    {{ $parent.getUsername(issue.created_by_id, "ghost") }}
                     <span
                       class="badge rounded-pill bg-primary"
                       v-if="$parent.getIntegration(issue.created_by_id)"
@@ -435,7 +441,7 @@
                 {{ issue.occurrences }}
               </td>
               <td colspan="1" class="text-center align-middle">
-                {{ $parent.getUsername(issue.assignee_id) || "Unassigned" }}
+                {{ $parent.getUsername(issue.assignee_id, "Unassigned") }}
               </td>
             </tr>
           </tbody>

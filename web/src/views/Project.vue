@@ -248,7 +248,7 @@ export default {
           return issue.id;
         });
     },
-    execute(marked, issues) {
+    execute(marked, issues, assigned) {
       var query = {
         issues: qs.stringify(issues),
       };
@@ -256,28 +256,28 @@ export default {
       if (marked == "assign") {
         query["action"] = "assign";
         query["assigning"] = true;
-        query["assignee_id"] = this.assigned;
+        query["assignee_id"] = assigned;
       }
       if (marked == "deassign") {
         query["action"] = "assign";
         query["assigning"] = false;
-        query["assignee_id"] = this.assigned;
+        query["assignee_id"] = assigned;
       }
       if (marked == "resolved") {
         query["action"] = "mark_status";
-        query["mark_type"] = "EntryResolved";
+        query["mark_type"] = "resolved";
       }
       if (marked == "active") {
         query["action"] = "mark_status";
-        query["mark_type"] = "EntryActive";
+        query["mark_type"] = "active";
       }
       if (marked == "open") {
         query["action"] = "mark_status";
-        query["mark_type"] = "EntryOpen";
+        query["mark_type"] = "open";
       }
       if (marked == "invalid") {
         query["action"] = "mark_status";
-        query["mark_type"] = "EntryInvalid";
+        query["mark_type"] = "invalid";
       }
       if (marked == "lock") {
         query["action"] = "lock_comments";
@@ -490,13 +490,11 @@ export default {
         this.contributors_loaded = true;
       }
     },
-    getUsername(id) {
+    getUsername(id, _default) {
       if (!this.contributors_loaded) {
         return "...";
       }
-      return this.contributors[id]
-        ? this.contributors[id].name
-        : `Unknown user ${id}`;
+      return this.contributors[id] ? this.contributors[id].name : _default;
     },
     getIntegration(id) {
       return this.contributors[id] ? this.contributors[id].integration : false;

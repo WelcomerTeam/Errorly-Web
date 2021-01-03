@@ -1,7 +1,11 @@
 package errorly
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +17,7 @@ import (
 
 	idgenerator "github.com/TheRockettek/Errorly-Web/pkg/idgenerator"
 	"github.com/TheRockettek/Errorly-Web/structs"
+	sandwich "github.com/TheRockettek/Sandwich-Daemon/structs"
 	"github.com/go-pg/pg/v10"
 	"github.com/gorilla/sessions"
 	jsoniter "github.com/json-iterator/go"
@@ -43,7 +48,12 @@ var ErrMissingSecret = xerrors.New("Invalid secret '%s' provided")
 
 // Configuration represents the configuration for Errorly.
 type Configuration struct {
-	Host          string `json:"host" yaml:"host"`
+	Host string `json:"host" yaml:"host"`
+
+	// Used for giving the right jump link to webhooks.
+	// Should be in format http://127.0.0.1:1234 with no slash
+	URL string `json:"url" yaml:"url"`
+
 	SessionSecret string `json:"secret" yaml:"secret"`
 
 	Postgres *pg.Options    `json:"postgres" yaml:"postgres"`
@@ -310,11 +320,231 @@ func (er *Errorly) Open(removeStaleEntries bool) (err error) {
 	return nil
 }
 
+func (er *Errorly) generateSecret(body io.Reader, secret string) (string, error) {
+	mac := hmac.New(sha256.New, []byte(secret))
+
+	res, err := ioutil.ReadAll(body)
+	if err != nil {
+		return "", err
+	}
+
+	mac.Write(res)
+	return hex.EncodeToString(mac.Sum(nil)), nil
+}
+
+// HandleProjectWebhook handles sending a webhook.
+func (er *Errorly) HandleProjectWebhook(project *structs.Project, payload structs.WebhookMessage) (err error) {
+	er.Logger.Debug().Msg("received new webhook request, webhooks: " + strconv.Itoa(len(project.Webhooks)))
+	for _, webhook := range project.Webhooks {
+		er.Logger.Debug().Msg("found webhook " + strconv.Itoa(int(webhook.ID)) + " active? " + strconv.FormatBool(webhook.Active))
+		if webhook.Active {
+			ok, err := er.DoWebhook(webhook, payload)
+			if err != nil {
+				er.Logger.Warn().Err(err).Msg("Failed to execute webhook")
+			}
+
+			println(ok, err)
+			if err != nil {
+				println(err.Error())
+			}
+
+			if !ok {
+				webhook.Failures++
+			} else {
+				webhook.Failures = 0
+			}
+
+			if webhook.Failures >= 5 {
+				webhook.Active = false
+				_, err := er.Postgres.Model(webhook).
+					WherePK().
+					Update()
+				if err != nil {
+					er.Logger.Error().Err(err).Msg("Failed to update webhook")
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func cutString(s string, l int) string {
+	if len(s) < l {
+		return s
+	} else {
+		return s[0:l] + "..."
+	}
+}
+
+// ConvertErrorlyToDiscordWebhook handles converting a default payload to a
+// suitable discord webhook payload
+func (er *Errorly) ConvertErrorlyToDiscordWebhook(payload structs.WebhookMessage) (bool, sandwich.WebhookMessage) {
+	switch payload.Type {
+	case structs.IssueCreate:
+		return true, sandwich.WebhookMessage{
+			Embeds: []sandwich.Embed{
+				{
+					Title:       fmt.Sprintf("[%s] Issue opened: %s", payload.Project.Settings.DisplayName, payload.Issue.Error),
+					URL:         fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+					Description: cutString(payload.Issue.Description, 2000),
+					Author: &sandwich.EmbedAuthor{
+						Name:    payload.Author.Name,
+						IconURL: payload.Author.Avatar,
+					},
+				},
+			},
+		}
+	case structs.IssueComment:
+		return true, sandwich.WebhookMessage{
+			Embeds: []sandwich.Embed{
+				{
+					Title:       fmt.Sprintf("[%s] New comment on issue: %s", payload.Project.Settings.DisplayName, payload.Issue.Error),
+					URL:         fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+					Description: cutString(*payload.Comment.Content, 2000),
+					Author: &sandwich.EmbedAuthor{
+						Name:    payload.Author.Name,
+						IconURL: payload.Author.Avatar,
+					},
+				},
+			},
+		}
+	case structs.IssueStarred:
+		// If the issue was unstarred, do not show as a webhook message
+		if !payload.Issue.Starred {
+			return false, sandwich.WebhookMessage{}
+		}
+
+		return true, sandwich.WebhookMessage{
+			Embeds: []sandwich.Embed{
+				{
+					Title: fmt.Sprintf("[%s] New star added to %s", payload.Project.Settings.DisplayName, payload.Issue.Error),
+					URL:   fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+					Author: &sandwich.EmbedAuthor{
+						Name:    payload.Author.Name,
+						IconURL: payload.Author.Avatar,
+					},
+				},
+			},
+		}
+	case structs.IssueAssigned:
+		if payload.Issue.AssigneeID == 0 {
+			return true, sandwich.WebhookMessage{
+				Embeds: []sandwich.Embed{
+					{
+						Title: fmt.Sprintf("[%s] Issue %s has been unassigned", payload.Project.Settings.DisplayName, payload.Issue.Error),
+						URL:   fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+						Author: &sandwich.EmbedAuthor{
+							Name:    payload.Author.Name,
+							IconURL: payload.Author.Avatar,
+						},
+					},
+				},
+			}
+		} else {
+			return true, sandwich.WebhookMessage{
+				Embeds: []sandwich.Embed{
+					{
+						Title: fmt.Sprintf("[%s] Issue %s assigned to %s", payload.Project.Settings.DisplayName, payload.Issue.Error, payload.Issue.Assignee.Name),
+						URL:   fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+						Author: &sandwich.EmbedAuthor{
+							Name:    payload.Author.Name,
+							IconURL: payload.Author.Avatar,
+						},
+					},
+				},
+			}
+		}
+	case structs.IssueLocked:
+		var issueLockedString string
+
+		if payload.Issue.CommentsLocked {
+			issueLockedString = "locked"
+		} else {
+			issueLockedString = "unlocked"
+		}
+
+		return true, sandwich.WebhookMessage{
+			Embeds: []sandwich.Embed{
+				{
+					Title: fmt.Sprintf("[%s] Issue %s has been %s", payload.Project.Settings.DisplayName, payload.Issue.Error, issueLockedString),
+					URL:   fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+					Author: &sandwich.EmbedAuthor{
+						Name:    payload.Author.Name,
+						IconURL: payload.Author.Avatar,
+					},
+				},
+			},
+		}
+	case structs.IssueMarkStatus:
+		return true, sandwich.WebhookMessage{
+			Embeds: []sandwich.Embed{
+				{
+					Title: fmt.Sprintf("[%s] Issue %s has been marked %s", payload.Project.Settings.DisplayName, payload.Issue.Error, payload.Issue.Type.String()),
+					URL:   fmt.Sprintf("%s/project/%d/issue/%d", er.Configuration.URL, payload.Project.ID, payload.Issue.ID),
+					Author: &sandwich.EmbedAuthor{
+						Name:    payload.Author.Name,
+						IconURL: payload.Author.Avatar,
+					},
+				},
+			},
+		}
+	}
+
+	return false, sandwich.WebhookMessage{}
+}
+
+// DoWebhook handles a webhook message.
+func (er *Errorly) DoWebhook(webhook *structs.Webhook, payload structs.WebhookMessage) (ok bool, err error) {
+	var res []byte
+
+	if webhook.Type == structs.RegularPayload {
+		res, err = json.Marshal(payload)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		// convert payload to discord format
+		ok, msg := er.ConvertErrorlyToDiscordWebhook(payload)
+		if !ok {
+			return true, nil
+		}
+
+		res, err = json.Marshal(msg)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	body := bytes.NewBuffer(res)
+
+	var secret string
+
+	if webhook.Secret != "" {
+		secret, err = er.generateSecret(bytes.NewBuffer(res), webhook.Secret)
+		if err != nil {
+			er.Logger.Warn().Err(err).Msg("Failed to generate webhook secret")
+		}
+	}
+
+	return er.ExecuteWebhook(webhook, body, secret)
+}
+
 // ExecuteWebhook executes a webhook.
-func (er *Errorly) ExecuteWebhook(webhook *structs.Webhook, body io.Reader) (ok bool, err error) {
+func (er *Errorly) ExecuteWebhook(webhook *structs.Webhook, body io.Reader, secret string) (ok bool, err error) {
 	req, err := http.NewRequestWithContext(er.ctx, "POST", webhook.URL, body)
 	if err != nil {
 		return false, xerrors.Errorf("failed to create request: %w", err)
+	}
+
+	// At the moent all requests will be of JSON content
+	// if webhook.Type == structs.DiscordWebhook || webhook.JSONContent {
+	// }
+	req.Header.Set("Content-Type", "application/json")
+
+	if secret != "" {
+		req.Header.Set("X-Errorly-Secret", secret)
 	}
 
 	res, err := er.client.Do(req)
@@ -324,5 +554,5 @@ func (er *Errorly) ExecuteWebhook(webhook *structs.Webhook, body io.Reader) (ok 
 
 	defer res.Body.Close()
 
-	return res.StatusCode == 200, nil
+	return res.StatusCode >= 200 && res.StatusCode <= 299, nil
 }
