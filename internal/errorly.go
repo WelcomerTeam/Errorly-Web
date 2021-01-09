@@ -35,7 +35,7 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // VERSION respects semantic versioning.
-const VERSION = "0.3.2"
+const VERSION = "0.4"
 
 // ConfigurationPath is the path to the file the configration will be located
 // at.
@@ -379,7 +379,7 @@ func cutString(s string, l int) string {
 }
 
 // ConvertErrorlyToDiscordWebhook handles converting a default payload to a
-// suitable discord webhook payload
+// suitable discord webhook payload.
 func (er *Errorly) ConvertErrorlyToDiscordWebhook(payload structs.WebhookMessage) (bool, sandwich.WebhookMessage) {
 	switch payload.Type {
 	case structs.IssueCreate:

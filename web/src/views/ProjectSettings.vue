@@ -641,6 +641,11 @@
             </tr>
           </tbody>
         </table>
+        
+        <div class="text-center">
+          <span class="text-muted">Want an invite code?</span>
+          <p>Invite in the format <kbd>{{ window.location.origin }}/project/{{ project.id }}/invite/...</kbd></p>
+        </div>
       </div>
       <div
         class="tab-pane fade"
@@ -759,22 +764,6 @@
             </tr>
           </tbody>
         </table>
-
-        <pre>
-          /api/project/{project_id}/integrations
-            - GET  - get integration
-            - POST - create integrations
-          /api/project/{project_id}/integration/{integration_id} POST   - update integrations
-          /api/project/{project_id}/integration/{integration_id}/reset  - resets integration token
-          /api/project/{project_id}/integration/{integration_id}/delete
-
-          - create integration
-          - manage integrations
-            - integration name
-            - get token
-            - reset token
-            - created by [] [] ago
-        </pre>
       </div>
       <div
         class="tab-pane fade"
@@ -782,7 +771,8 @@
         role="tabpanel"
         aria-labelledby="v-pills-webhooks-tab"
       >
-        <pre>
+        <h4>Comming soon!</h4>
+        <pre style="display: none;">
           /api/project/{project_id}/webhooks
           - GET  - get webhooks
           - POST - create webhooks
@@ -872,6 +862,8 @@ export default {
       mdiDotsVertical,
       mdiWebhook,
       mdiWrench,
+
+      window: window,
 
       error: undefined,
       project: JSON.parse(JSON.stringify(this.$parent.project)),
