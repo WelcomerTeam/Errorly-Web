@@ -171,9 +171,9 @@ func createEndpoints(er *Errorly) (router *MethodRouter) {
 	// Webhooks:
 	router.HandleFunc("/api/project/{project_id}/webhook", APIProjectWebhookCreateHandler(er), "POST")
 	// Creates a webhook
-	// router.HandleFunc("/api/project/{project_id}/webhook/{webhook_id}", APIProjectWebhookDeleteHandler(er), "DELETE")
+	router.HandleFunc("/api/project/{project_id}/webhook/{webhook_id}", APIProjectWebhookDeleteHandler(er), "DELETE")
 	// Deletes a webhook
-	// router.HandleFunc("/api/project/{project_id}/webhook/{webhook_id}/test", APIProjectWebhookTestHandler(er), "POST")
+	router.HandleFunc("/api/project/{project_id}/webhook/{webhook_id}/test", APIProjectWebhookTestHandler(er), "POST")
 	// Tests webhook
 
 	// PATCH /api/project/{project_id}/webhook/{webhook_id} - Updates a webhook

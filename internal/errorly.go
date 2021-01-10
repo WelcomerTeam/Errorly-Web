@@ -343,9 +343,8 @@ func (er *Errorly) HandleProjectWebhook(project *structs.Project, payload struct
 				er.Logger.Warn().Err(err).Msg("Failed to execute webhook")
 			}
 
-			println(ok, err)
 			if err != nil {
-				println(err.Error())
+				er.Logger.Error().Err(err).Msg("Failed to execute webhook")
 			}
 
 			if !ok {
@@ -356,13 +355,16 @@ func (er *Errorly) HandleProjectWebhook(project *structs.Project, payload struct
 
 			if webhook.Failures >= 5 {
 				webhook.Active = false
-				_, err := er.Postgres.Model(webhook).
-					WherePK().
-					Update()
-				if err != nil {
-					er.Logger.Error().Err(err).Msg("Failed to update webhook")
-					return err
-				}
+			} else {
+				webhook.Active = true
+			}
+
+			_, err = er.Postgres.Model(webhook).
+				WherePK().
+				Update()
+			if err != nil {
+				er.Logger.Error().Err(err).Msg("Failed to update webhook")
+				return err
 			}
 		}
 	}
@@ -382,6 +384,10 @@ func cutString(s string, l int) string {
 // suitable discord webhook payload.
 func (er *Errorly) ConvertErrorlyToDiscordWebhook(payload structs.WebhookMessage) (bool, sandwich.WebhookMessage) {
 	switch payload.Type {
+	case structs.TestWebhook:
+		return true, sandwich.WebhookMessage{
+			Content: "Test Webhook",
+		}
 	case structs.IssueCreate:
 		return true, sandwich.WebhookMessage{
 			Embeds: []sandwich.Embed{

@@ -3245,6 +3245,169 @@ func APIProjectWebhookCreateHandler(er *Errorly) http.HandlerFunc {
 	}
 }
 
-// func Handler(er *Errorly) http.HandlerFunc {
-// 	return
-// }
+// APIProjectWebhookDeleteHandler handles deleting a webhook.
+func APIProjectWebhookDeleteHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		webhookID := vars["webhook_id"]
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		webhook := &structs.Webhook{}
+
+		res, err := er.Postgres.Model(webhook).
+			Where("id = ?", webhookID).
+			Where("project_id = ?", project.ID).
+			Delete()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				passResponse(rw, "Invalid webhook passed", false, http.StatusBadRequest)
+
+				return
+			}
+
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		if res.RowsAffected() == 0 {
+			passResponse(rw, "Invalid webhook passed", false, http.StatusBadRequest)
+
+			return
+		}
+
+		passResponse(rw, "OK", true, http.StatusOK)
+	}
+}
+
+// APIProjectWebhookTestHandler handles testing a webhook.
+func APIProjectWebhookTestHandler(er *Errorly) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		session, _ := er.Store.Get(r, sessionName)
+		defer er.SaveSession(session, r, rw)
+
+		vars := mux.Vars(r)
+
+		webhookID := vars["webhook_id"]
+
+		// Authenticate the user
+		auth, user := er.AuthenticateSession(session)
+		if !auth {
+			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		project, viewable, elevated, ok := verifyProjectVisibility(er, rw, vars, user, auth, true)
+		if !ok {
+			// If ok is False, an error has already been provided to the ResponseWriter so we should just return
+			return
+		}
+
+		if !viewable {
+			// No permission to view project. We will treat like the project
+			// does not exist.
+			passResponse(rw, "Could not find this project", false, http.StatusBadRequest)
+
+			return
+		}
+
+		if !elevated {
+			// No permission to execute on project. We will simply tell them
+			// they cannot do this.
+			passResponse(rw, "Guests to a project cannot do this", false, http.StatusForbidden)
+
+			return
+		}
+
+		webhook := &structs.Webhook{}
+
+		err := er.Postgres.Model(webhook).
+			Where("id = ?", webhookID).
+			Where("project_id = ?", project.ID).
+			Select()
+		if err != nil {
+			if errors.Is(err, pg.ErrNoRows) {
+				passResponse(rw, "Invalid webhook passed", false, http.StatusBadRequest)
+
+				return
+			}
+
+			// Unexpected error
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		testPayload := structs.WebhookMessage{
+			Type: structs.TestWebhook,
+		}
+
+		ok, err = er.DoWebhook(webhook, testPayload)
+		if !ok {
+			webhook.Failures++
+		} else {
+			webhook.Failures = 0
+		}
+
+		if webhook.Failures >= 5 {
+			webhook.Active = false
+		} else {
+			webhook.Active = true
+		}
+
+		_, err = er.Postgres.Model(webhook).
+			WherePK().
+			Update()
+		if err != nil {
+			passResponse(rw, err.Error(), false, http.StatusInternalServerError)
+
+			return
+		}
+
+		resp := structs.WebhookTest{
+			OK:      ok,
+			Webhook: webhook,
+		}
+
+		if err != nil {
+			resp.Error = err.Error()
+		}
+
+		passResponse(rw, resp, true, http.StatusOK)
+	}
+}

@@ -771,6 +771,92 @@
         role="tabpanel"
         aria-labelledby="v-pills-webhooks-tab"
       >
+        <div class="d-flex pb-3 border-bottom border-muted">
+          <button
+            class="btn btn-success w-100"
+            @click="showCreateWebhookModal()"
+          >
+            Create Webhook
+          </button>
+        </div>
+
+        <table class="table table-borderless table-hover d-table">
+          <tbody>
+            <tr
+              v-for="(webhook, index) in this.project.webhooks"
+              v-bind:key="index"
+              class="list-group-item d-table-row card text-left py-3 border-bottom border-muted border-top-0 border-left-0 border-right-0"
+            >
+              <pre>
+                {{ webhook }}
+              </pre>
+              <!-- <th class="ticket-status" colspan="8">
+                <img
+                  :src="
+                    integration.avatar
+                      ? integration.avatar
+                      : '/img/integration.png'
+                  "
+                  class="rounded-circle"
+                  width="32"
+                  height="32"
+                  alt="Profile picture"
+                />
+                <span class="contributor-name ml-2 align-middle">
+                  {{ integration.name }}
+                </span>
+              </th>
+              <th class="text-right align-middle" colspan="4">
+                <div class="dropdown">
+                  <button
+                    class="btn text-dark"
+                    type="button"
+                    id="dropdownMenuButton"
+                    data-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    <svg-icon
+                      type="mdi"
+                      width="20"
+                      height="20"
+                      :path="mdiDotsVertical"
+                    />
+                  </button>
+                  <ul
+                    class="dropdown-menu"
+                    aria-labelledby="dropdownMenuButton"
+                  >
+                    <li>
+                      <a
+                        class="dropdown-item user-select-none pe-auto"
+                        @click="regenerateToken(integration)"
+                        >Regenerate Token</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        class="dropdown-item user-select-none pe-auto"
+                        @click="copyToken(integration)"
+                        >Copy Token</a
+                      >
+                    </li>
+                    <li>
+                      <hr class="dropdown-divider" />
+                    </li>
+                    <li>
+                      <a
+                        class="dropdown-item user-select-none pe-auto"
+                        @click="showRemoveIntegrationModal(integration)"
+                        >Delete Integration</a
+                      >
+                    </li>
+                  </ul>
+                </div>
+              </th> -->
+            </tr>
+          </tbody>
+        </table>
+
         <h4>Comming soon!</h4>
         <pre style="display: none;">
           /api/project/{project_id}/webhooks

@@ -17,13 +17,17 @@ const (
 	IntegrationUser
 )
 
-// WebhookEventType signifies what type of event occurred for the webhook
-type WebhookEventType uint8
+// WebhookEventType signifies what type of event occurred for the webhook.
+type WebhookEventType int8
 
 const (
+	// TestWebhooks should not be shown however still properly handled, if
+	// possible however by default will still display a message. It will
+	// have a code of -1.
+	TestWebhook WebhookEventType = iota - 1
 	// IssueCreate signifies a new issue was made. The project,
 	// issue ands author are attached.
-	IssueCreate WebhookEventType = iota
+	IssueCreate
 	// IssueComment signifies a user sent a new comment. The
 	// project, issue, author and comment are attached.
 	IssueComment
@@ -265,4 +269,12 @@ type WebhookMessage struct {
 	Comment *Comment    `json:"comment,omitempty"`
 
 	Author *User `json:"author,omitempty"`
+}
+
+// WebhookTest is the structure of the /api/project/{project_id}/webhook/{webhook_id}/test request
+type WebhookTest struct {
+	OK    bool   `json:"ok"`
+	Error string `json:"error"`
+
+	Webhook *Webhook `json:"webhook"`
 }
