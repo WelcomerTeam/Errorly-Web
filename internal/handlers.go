@@ -1328,7 +1328,8 @@ func APIProjectContributorsRemoveHandler(er *Errorly) http.HandlerFunc {
 		err = er.Postgres.Model(&contributorUser).
 			Where("id = ?", userID).
 			Select()
-		if err != nil {
+
+			if err != nil {
 			er.Logger.Error().Err(err).Msg("Failed to retrieve user contributor")
 		} else {
 			contributorUserProjectList := make([]int64, 0)
@@ -2579,6 +2580,7 @@ func APIProjectInviteUseHandler(er *Errorly) http.HandlerFunc {
 		inviteCode, ok := vars["join_code"]
 		if !ok {
 			passResponse(rw, "No invite code supplied", false, http.StatusBadRequest)
+
 			return
 		}
 
@@ -2586,6 +2588,7 @@ func APIProjectInviteUseHandler(er *Errorly) http.HandlerFunc {
 		auth, user := er.AuthenticateSession(session)
 		if !auth {
 			passResponse(rw, "You must be logged in to do this", false, http.StatusForbidden)
+
 			return
 		}
 
@@ -3198,7 +3201,7 @@ func APIProjectWebhookCreateHandler(er *Errorly) http.HandlerFunc {
 
 		webhookSecret := r.FormValue("secret")
 
-		useJson, err := strconv.ParseBool(r.FormValue("use_json"))
+		useJSON, err := strconv.ParseBool(r.FormValue("use_json"))
 		if err != nil {
 			passResponse(rw, "Passed use_json value is not valid", false, http.StatusBadRequest)
 
@@ -3229,7 +3232,7 @@ func APIProjectWebhookCreateHandler(er *Errorly) http.HandlerFunc {
 			Secret:      webhookSecret,
 			URL:         webhookURL.String(),
 			Type:        webhookType,
-			JSONContent: useJson,
+			JSONContent: useJSON,
 			Active:      true,
 
 			Failures: 0,
@@ -3378,7 +3381,7 @@ func APIProjectWebhookTestHandler(er *Errorly) http.HandlerFunc {
 		}
 
 		ok, err = er.DoWebhook(webhook, testPayload)
-		if !ok {
+		if !ok || err != nil {
 			webhook.Failures++
 		} else {
 			webhook.Failures = 0

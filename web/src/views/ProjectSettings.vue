@@ -599,6 +599,21 @@
             >
               <th class="invite" colspan="7">
                 <span class="invite-code">{{ invite.code }}</span>
+
+                <button class="btn copy-button"
+                  @click="
+                    copyText(window.location.origin + '/project/' + project.id + '/invite/' + invite.code);
+                    $bvToast.toast('Copied invite to clipboard', { title: 'Invite copied', appendToast: true });
+                  "
+                >
+                  <svg-icon
+                    type="mdi"
+                    width="20"
+                    height="20"
+                    :path="mdiContentCopy"
+                  />
+                </button>
+
                 <span class="invite-footer align-middle">
                   Created by
                   <b>ImRock</b>
@@ -644,7 +659,7 @@
         
         <div class="text-center">
           <span class="text-muted">Want an invite code?</span>
-          <p>Invite in the format <kbd>{{ window.location.origin }}/project/{{ project.id }}/invite/...</kbd></p>
+          <p>Click <kbd class="fake-button" @click="showCreateInviteModal()">create invite</kbd> or click the <svg-icon type="mdi" width="20" height="20" :path="mdiContentCopy" /> next to an existing invite</p>
         </div>
       </div>
       <div
@@ -881,6 +896,23 @@
   </div>
 </template>
 
+<style lang="scss" scoped>
+@import "node_modules/bootstrap/scss/bootstrap.scss";
+
+.fake-button {
+  background: $success;
+  cursor: pointer;
+}
+
+.fake-button:hover {
+  background: darken($success, 10%);
+}
+
+.copy-button:active {
+  color: $primary;
+}
+</style>
+
 <style scoped>
 .contributor-name {
   font-weight: normal;
@@ -916,6 +948,7 @@ import {
   mdiAccountDetails,
   mdiAccountMultiplePlus,
   mdiCogOutline,
+  mdiContentCopy,
   mdiClose,
   mdiCloseCircleOutline,
   mdiCrown,
@@ -944,6 +977,7 @@ export default {
       mdiClose,
       mdiCloseCircleOutline,
       mdiCogOutline,
+      mdiContentCopy,
       mdiCrown,
       mdiDotsVertical,
       mdiWebhook,

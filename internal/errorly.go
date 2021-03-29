@@ -35,7 +35,7 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // VERSION respects semantic versioning.
-const VERSION = "0.4"
+const VERSION = "0.4.1+30032021"
 
 // ConfigurationPath is the path to the file the configration will be located
 // at.
@@ -325,18 +325,21 @@ func (er *Errorly) generateSecret(body io.Reader, secret string) (string, error)
 
 	res, err := ioutil.ReadAll(body)
 	if err != nil {
-		return "", err
+		return "", xerrors.Errorf("Failed to readd body: %w", err)
 	}
 
 	mac.Write(res)
+
 	return hex.EncodeToString(mac.Sum(nil)), nil
 }
 
 // HandleProjectWebhook handles sending a webhook.
 func (er *Errorly) HandleProjectWebhook(project *structs.Project, payload structs.WebhookMessage) (err error) {
 	er.Logger.Debug().Msg("received new webhook request, webhooks: " + strconv.Itoa(len(project.Webhooks)))
+
 	for _, webhook := range project.Webhooks {
 		er.Logger.Debug().Msg("found webhook " + strconv.Itoa(int(webhook.ID)) + " active? " + strconv.FormatBool(webhook.Active))
+
 		if webhook.Active {
 			ok, err := er.DoWebhook(webhook, payload)
 			if err != nil {
@@ -364,7 +367,8 @@ func (er *Errorly) HandleProjectWebhook(project *structs.Project, payload struct
 				Update()
 			if err != nil {
 				er.Logger.Error().Err(err).Msg("Failed to update webhook")
-				return err
+
+				return xerrors.Errorf("Failed to update webhook: %w", err)
 			}
 		}
 	}
@@ -508,7 +512,7 @@ func (er *Errorly) DoWebhook(webhook *structs.Webhook, payload structs.WebhookMe
 	if webhook.Type == structs.RegularPayload {
 		res, err = json.Marshal(payload)
 		if err != nil {
-			return false, err
+			return false, xerrors.Errorf("Failed to marshal payload: %w", err)
 		}
 	} else {
 		// convert payload to discord format
